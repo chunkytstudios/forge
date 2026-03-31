@@ -190,6 +190,31 @@
   .upcoming-done .upcoming-date-col{background:var(--bg);}
   .upcoming-toggle{display:flex;align-items:center;gap:6px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);padding:4px 0;user-select:none;}
   .upcoming-toggle:hover{color:var(--text);}
+
+  /* PROGRAM SUGGESTIONS */
+  .prog-suggest-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:20px;}
+  .prog-card{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--bg3);transition:border-color .2s,transform .15s;cursor:pointer;}
+  .prog-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+  .prog-card.featured{border-color:rgba(232,255,71,.25);}
+  .prog-card-header{padding:14px 16px 10px;border-bottom:1px solid var(--border);}
+  .prog-card-author{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;}
+  .prog-card-name{font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:.06em;line-height:1.1;margin-bottom:6px;}
+  .prog-card-tags{display:flex;gap:5px;flex-wrap:wrap;}
+  .prog-tag{padding:2px 7px;border-radius:100px;font-size:9px;font-family:'DM Mono',monospace;letter-spacing:.05em;text-transform:uppercase;}
+  .prog-tag-str{background:rgba(68,136,255,.12);color:#4488ff;border:1px solid rgba(68,136,255,.25);}
+  .prog-tag-hyp{background:rgba(232,255,71,.1);color:var(--accent);border:1px solid rgba(232,255,71,.2);}
+  .prog-tag-beg{background:rgba(68,255,136,.1);color:var(--green);border:1px solid rgba(68,255,136,.2);}
+  .prog-tag-int{background:rgba(255,107,43,.1);color:var(--accent2);border:1px solid rgba(255,107,43,.2);}
+  .prog-tag-adv{background:rgba(255,68,68,.1);color:var(--red);border:1px solid rgba(255,68,68,.2);}
+  .prog-card-body{padding:12px 16px;}
+  .prog-card-desc{font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:10px;}
+  .prog-card-meta{display:flex;gap:14px;font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);}
+  .prog-card-footer{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;justify-content:space-between;}
+  .prog-avail{font-size:10px;font-family:'DM Mono',monospace;}
+  .prog-avail.free{color:var(--green);}
+  .prog-avail.paid{color:var(--text3);}
+  .prog-avail.builtin{color:var(--accent);}
+  .suggest-section-label{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.1em;color:var(--text2);margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
 </style>
 </head>
 <body>
@@ -824,7 +849,11 @@ function renderPrograms(){
   const prog=getActiveProg();
   let h=`<div class="section-header"><div class="section-title">PROGRAMS</div>
     ${prog?`<button class="btn btn-secondary" onclick="newProgram()">NEW PROGRAM</button>`:''}</div>`;
-  if(!prog){ h+=renderBuilder(); return h; }
+  if(!prog){
+    h+=renderSuggestions();
+    h+=renderBuilder();
+    return h;
+  }
 
   const wk=getWeek(prog);
   h+=`<div class="card">
@@ -1726,6 +1755,248 @@ function importData(){
   } catch(e){
     toast('Invalid JSON — check your paste and try again');
   }
+}
+
+// ============================================================
+// PROGRAM SUGGESTIONS
+// ============================================================
+const SUGGESTED_PROGRAMS = [
+  // ── BUILT-IN CUSTOM ──────────────────────────────────────────────────────
+  {
+    id:'jakes_5x5',
+    author:"Jake's Programs",
+    name:"Jake's 5x5",
+    tags:['strength','intermediate'],
+    desc:'Classic 3-month compound barbell program, 3 days/week. All barbell movements. Shoulders → Chest → Back → Legs each session. Squats and deadlifts alternate weekly with variation (sumo, hex bar, smith machine, etc). Goal: +2.5lbs every workout.',
+    days:3, weeks:12, repsScheme:'5×5',
+    focus:'Strength & size through progressive overload on compound barbell lifts.',
+    availability:'builtin',
+    availLabel:'Built-in',
+  },
+  {
+    id:'beginner_program',
+    author:"Jake's Programs",
+    name:'The Beginner',
+    tags:['beginner','hypertrophy'],
+    desc:'3-month full-body program using the safest, most beginner-friendly movements. Rep ranges 6–15, always 2 reps in the tank. 12 sets per muscle group per week. Slight emphasis on compound strength.',
+    days:3, weeks:12, repsScheme:'6–15 reps',
+    focus:'Safe, consistent progress. Build a foundation in compound lifts.',
+    availability:'builtin',
+    availLabel:'Built-in',
+  },
+  // ── PUBLICLY DOCUMENTED / FREE ───────────────────────────────────────────
+  {
+    id:'arnold_golden_six',
+    author:'Arnold Schwarzenegger',
+    name:"Arnold's Golden Six",
+    tags:['beginner','hypertrophy','strength'],
+    desc:'The routine Arnold used in his early Munich training days. Six compound exercises, full body, 3×/week. Squat, Wide-Grip Bench, Chin-Up, OHP, Barbell Curl, Sit-Up. Increase load when you can hit 2–3 reps above target.',
+    days:3, weeks:12, repsScheme:'3–4×10',
+    focus:'Full-body strength base. Legendary simplicity.',
+    availability:'free',
+    availLabel:'Publicly documented — free',
+    link:'https://liftvault.com/programs/bodybuilding/arnold-schwarzenegger-workout-routine-golden-six/',
+  },
+];
+
+function renderSuggestions(){
+  const TAG_MAP={
+    strength:'prog-tag-str',hypertrophy:'prog-tag-hyp',
+    beginner:'prog-tag-beg',intermediate:'prog-tag-int',advanced:'prog-tag-adv'
+  };
+
+  const builtin=SUGGESTED_PROGRAMS.filter(p=>p.availability==='builtin');
+  const free=SUGGESTED_PROGRAMS.filter(p=>p.availability==='free');
+
+  function card(p){
+    const isBuiltin=p.availability==='builtin';
+    return `<div class="prog-card ${isBuiltin?'featured':''}" >
+      <div class="prog-card-header">
+        <div class="prog-card-author">${p.author}</div>
+        <div class="prog-card-name">${p.name}</div>
+        <div class="prog-card-tags">
+          ${p.tags.map(t=>`<span class="prog-tag ${TAG_MAP[t]||''}">${t}</span>`).join('')}
+        </div>
+      </div>
+      <div class="prog-card-body">
+        <div class="prog-card-desc">${p.desc}</div>
+        <div class="prog-card-meta">
+          <span>📅 ${p.weeks} wks</span>
+          <span>🗓 ${p.days} days/wk</span>
+          <span>🔢 ${p.repsScheme}</span>
+        </div>
+        ${p.note?`<div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:8px;font-style:italic">${p.note}</div>`:''}
+      </div>
+      <div class="prog-card-footer">
+        <span class="prog-avail ${p.availability}">${p.availLabel}</span>
+        ${isBuiltin?`<button class="btn btn-primary btn-sm" onclick="loadSuggestedProgram('${p.id}')">LOAD PROGRAM →</button>`:''}
+        ${p.availability==='free'&&p.link?`<a href="${p.link}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none">VIEW SOURCE ↗</a>`:''}
+      </div>
+    </div>`;
+  }
+
+  return `<div class="card" style="margin-bottom:20px">
+    <div class="card-title">PROGRAM SUGGESTIONS</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.55">Built-in programs load directly into FORGE. Free publicly documented programs link to their original source.</div>
+    <div class="suggest-section-label">BUILT INTO FORGE</div>
+    <div class="prog-suggest-grid">${builtin.map(card).join('')}</div>
+    <div class="suggest-section-label">FREE & PUBLICLY DOCUMENTED</div>
+    <div class="prog-suggest-grid">${free.map(card).join('')}</div>
+  </div>`;
+}
+
+function loadSuggestedProgram(id){
+  if(id==='jakes_5x5') loadJakes5x5();
+  else if(id==='beginner_program') loadBeginnerProgram();
+  else if(id==='arnold_golden_six') loadArnoldGoldenSix();
+  else toast('Select muscles below to build this program.');
+}
+
+// ── JAKE'S 5×5 ──────────────────────────────────────────────────────────────
+function loadJakes5x5(){
+  DB.programs.forEach(p=>p.active=false);
+  const id='prog_'+Date.now();
+  const schedule={};
+
+  // 12 weeks × 3 days. Each workout: OHP, Bench/Incline alt, Row/Pull alt, Squat/DL alt
+  // Barbell only. Shoulder→Chest→Back→Legs order.
+  const BENCH_ALT=['flat_bench','incline_bench','decline_bench','flat_bench'];
+  const SQ_ALT=['squat','front_squat','goblet_squat','squat'];
+  const DL_ALT=['deadlift','rdl','rdl','deadlift'];
+  const ROW_ALT=['bent_row','tbar_row','bent_row','tbar_row'];
+
+  for(let w=1;w<=12;w++){
+    const wk=Math.ceil(w/3); // 4-week intensity blocks
+    for(let d=1;d<=3;d++){
+      const globalDay=(w-1)*3+(d-1);
+      const bench=BENCH_ALT[globalDay%BENCH_ALT.length];
+      const isSquatWeek=(w%2===1);
+      const mainLeg=isSquatWeek?SQ_ALT[d-1]:DL_ALT[d-1];
+      const mainLegMuscle=isSquatWeek?'quads':'hamstrings';
+      const row=ROW_ALT[globalDay%ROW_ALT.length];
+
+      const getEx=(id,muscle)=>{ const pool=EXERCISES[muscle]||[]; const e=pool.find(x=>x.id===id)||pool[0]; return e?{...e,muscle}:null; };
+
+      const exercises=[
+        getEx('ohp','shoulders'),
+        getEx(bench,'chest'),
+        getEx(row,'back'),
+        getEx(mainLeg,mainLegMuscle),
+        // Add glutes on leg days
+        getEx('hip_thrust','glutes'),
+      ].filter(Boolean).map(ex=>({...ex,sets:5,targetReps:'5',notes:'Add 2.5lbs each session'}));
+
+      const wkKey=`w${w}_d${d}`;
+      schedule[wkKey]={exercises,week:w,day:d};
+    }
+  }
+
+  DB.programs.push({
+    id,name:"Jake's 5x5",daysPerWeek:3,
+    muscles:['shoulders','chest','back','quads','hamstrings','glutes'],
+    priority:'shoulders,chest,back,quads,hamstrings,glutes',
+    schedule,startDate:todayStr(),active:true,
+    description:"Classic barbell compound program. +2.5lbs every session. 12 weeks.",
+    totalWeeks:12
+  });
+  DB.activeProgram=id;
+  saveDB();toast("Jake's 5x5 loaded!");switchView('dashboard');
+}
+
+// ── THE BEGINNER ─────────────────────────────────────────────────────────────
+function loadBeginnerProgram(){
+  DB.programs.forEach(p=>p.active=false);
+  const id='prog_'+Date.now();
+  const schedule={};
+
+  // Safe beginner movements. Full body 3×/week. 12 weeks.
+  // 12 sets per muscle group per week = 4 sets × 3 sessions
+  const SESSIONS=[
+    // Session A
+    [
+      {id:'leg_press',muscle:'quads'},{id:'seated_leg_curl',muscle:'hamstrings'},
+      {id:'db_flat',muscle:'chest'},{id:'lat_pulldown',muscle:'back'},
+      {id:'machine_shoulder',muscle:'shoulders'},{id:'cable_pushdown',muscle:'triceps'},
+      {id:'machine_curl',muscle:'biceps'},{id:'machine_hip_thrust',muscle:'glutes'},
+    ],
+    // Session B
+    [
+      {id:'goblet_squat',muscle:'quads'},{id:'leg_curl',muscle:'hamstrings'},
+      {id:'db_incline',muscle:'chest'},{id:'cable_row',muscle:'back'},
+      {id:'db_ohp',muscle:'shoulders'},{id:'overhead_ext',muscle:'triceps'},
+      {id:'hammer_curl',muscle:'biceps'},{id:'hip_abduction',muscle:'glutes'},
+    ],
+    // Session C — slight compound emphasis
+    [
+      {id:'hack_squat',muscle:'quads'},{id:'rdl',muscle:'hamstrings'},
+      {id:'pec_deck',muscle:'chest'},{id:'chest_supported',muscle:'back'},
+      {id:'lateral_raise',muscle:'shoulders'},{id:'cable_pushdown',muscle:'triceps'},
+      {id:'cable_curl',muscle:'biceps'},{id:'machine_hip_thrust',muscle:'glutes'},
+    ],
+  ];
+
+  for(let w=1;w<=12;w++){
+    for(let d=1;d<=3;d++){
+      const sessIdx=(d-1)%3;
+      const reps=w<=4?[10,12]:w<=8?[8,12]:[6,10]; // progress rep range
+      const exercises=SESSIONS[sessIdx].map(e=>{
+        const pool=EXERCISES[e.muscle]||[];
+        const ex=pool.find(x=>x.id===e.id)||pool[0];
+        return ex?{...ex,muscle:e.muscle,sets:4,targetReps:`${reps[0]}–${reps[1]} (2 RIR)`}:null;
+      }).filter(Boolean);
+
+      schedule[`w${w}_d${d}`]={exercises,week:w,day:d};
+    }
+  }
+
+  DB.programs.push({
+    id,name:'The Beginner',daysPerWeek:3,
+    muscles:['quads','hamstrings','chest','back','shoulders','triceps','biceps','glutes'],
+    priority:'quads,hamstrings,chest,back,shoulders,triceps,biceps,glutes',
+    schedule,startDate:todayStr(),active:true,
+    description:'Safe, beginner-friendly full body program. 12 weeks. 12 sets/muscle/week.',
+    totalWeeks:12
+  });
+  DB.activeProgram=id;
+  saveDB();toast('The Beginner program loaded!');switchView('dashboard');
+}
+
+// ── ARNOLD'S GOLDEN SIX ──────────────────────────────────────────────────────
+function loadArnoldGoldenSix(){
+  DB.programs.forEach(p=>p.active=false);
+  const id='prog_'+Date.now();
+  const schedule={};
+
+  // 12 weeks × 3 days. Same 6 exercises every session.
+  // Squat, Wide Bench, Pull-Up (Lat Pulldown sub), OHP, Barbell Curl, Core
+  const exercises=[
+    {...(EXERCISES.quads.find(e=>e.id==='squat')||EXERCISES.quads[0]),muscle:'quads',sets:4,targetReps:'10'},
+    {...(EXERCISES.chest.find(e=>e.id==='flat_bench')||EXERCISES.chest[0]),muscle:'chest',sets:3,targetReps:'10'},
+    {...(EXERCISES.back.find(e=>e.id==='lat_pulldown')||EXERCISES.back[0]),muscle:'back',sets:3,targetReps:'AMRAP'},
+    {...(EXERCISES.shoulders.find(e=>e.id==='ohp')||EXERCISES.shoulders[0]),muscle:'shoulders',sets:4,targetReps:'10'},
+    {...(EXERCISES.biceps.find(e=>e.id==='ez_curl')||EXERCISES.biceps[0]),muscle:'biceps',sets:3,targetReps:'10'},
+    {...(EXERCISES.core.find(e=>e.id==='decline_situp')||EXERCISES.core[0]),muscle:'core',sets:3,targetReps:'AMRAP'},
+  ];
+
+  for(let w=1;w<=12;w++){
+    for(let d=1;d<=3;d++){
+      // Slightly increase sets in weeks 9–12 (Arnold's progression scheme)
+      const extraSet=w>=9?1:0;
+      const weekExs=exercises.map(ex=>({...ex,sets:ex.id==='squat'||ex.id==='ohp'?ex.sets+extraSet:ex.sets}));
+      schedule[`w${w}_d${d}`]={exercises:JSON.parse(JSON.stringify(weekExs)),week:w,day:d};
+    }
+  }
+
+  DB.programs.push({
+    id,name:"Arnold's Golden Six",daysPerWeek:3,
+    muscles:['quads','chest','back','shoulders','biceps','core'],
+    priority:'quads,chest,back,shoulders,biceps,core',
+    schedule,startDate:todayStr(),active:true,
+    description:"Arnold's classic 6-exercise full body program. 12 weeks. Increase weight when you hit 2–3 extra reps.",
+    totalWeeks:12
+  });
+  DB.activeProgram=id;
+  saveDB();toast("Arnold's Golden Six loaded!");switchView('dashboard');
 }
 </script>
 </body>
