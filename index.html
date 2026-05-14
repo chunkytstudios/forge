@@ -462,7 +462,7 @@ function computeRec(exId, muscle, weekNum) {
 
   const tr = weekTargetReps(weekNum);
   return {
-    sets: Math.max(1,Math.min(6, base.sets+sa)),
+    sets: Math.max(1,Math.min(5, base.sets+sa)), // Rule 1: ≤5 sets/exercise
     reps: `${Math.max(4,tr[0]+ra)}–${Math.max(6,tr[1]+ra)}`,
     note
   };
@@ -1518,6 +1518,57 @@ function createProgram(){
   saveDB();toast('Program created!');render();
 }
 
+// ── RP Volume Landmark helpers ───────────────────────────────────────────────
+// Rule 3+5: frequency ≥3 → 1 exercise per muscle per session
+//           frequency 1-2 AND sets 10-15 → 3 exercises; distinct parts OR >5 sets → 2
+function rpExerciseCount(daysPerWeek, setsPerSession){
+  if(daysPerWeek>=3) return 1;                   // Rule 5
+  if(setsPerSession>=10) return 3;               // Rule 7
+  return 2;                                       // Rule 6 default for 1-2x/week
+}
+
+// Rule 4: sets per exercise scales inversely with frequency
+function rpSetsPerExercise(daysPerWeek, weekNum){
+  const base=weekSets(weekNum);
+  if(daysPerWeek>=5) return Math.max(2, base-1); // high freq → fewer sets
+  if(daysPerWeek>=3) return base;
+  return Math.min(5, base+1);                    // low freq → can push sets (cap 5, Rule 1)
+}
+
+// Rule 2: hard cap — no muscle exceeds 12 sets per session
+// Rule 8: hard cap — no muscle exceeds 4 exercises per session
+function rpCapExercises(exs){
+  const byCap={};
+  return exs.filter(ex=>{
+    if(!byCap[ex.muscle]) byCap[ex.muscle]={count:0,sets:0};
+    const sets=ex.sets||3;
+    if(byCap[ex.muscle].count>=4) return false;       // Rule 8: ≤4 ex/muscle
+    if(byCap[ex.muscle].sets+sets>12) return false;   // Rule 2: ≤12 sets/muscle
+    byCap[ex.muscle].count++;
+    byCap[ex.muscle].sets+=sets;
+    return true;
+  });
+}
+
+// Rule 9: minimize redundancy — pick exercises that target different movement patterns
+// Simple approach: for each muscle, use a different pool index per day and week
+function rpPickExercises(muscle, count, dayOffset, weekOffset){
+  const pool=getPool(muscle);
+  if(!pool.length) return [];
+  const picked=[];
+  const usedIdx=new Set();
+  // Stride through pool using day+week offset to ensure variation across sessions
+  let baseIdx=(dayOffset*3+weekOffset*7)%pool.length;
+  for(let i=0;i<count&&picked.length<count;i++){
+    const idx=(baseIdx+i)%pool.length;
+    if(!usedIdx.has(idx)){
+      usedIdx.add(idx);
+      picked.push(pool[idx]);
+    }
+  }
+  return picked;
+}
+
 function buildSchedule(priorities,daysPerWeek){
   const sched={};
   const top=priorities.slice(0,3).map(p=>p.muscle);
@@ -1526,29 +1577,53 @@ function buildSchedule(priorities,daysPerWeek){
   const hasL=all.some(m=>MUSCLE_GROUPS.lower.includes(m));
   const hasA=all.some(m=>MUSCLE_GROUPS.accessory.includes(m));
 
+  // Pre-compute per-muscle session frequency across the week
+  // Priority muscles appear every session; others once per coverage pass
+  const muscleFreq={};
+  all.forEach(m=>{ muscleFreq[m]=top.includes(m)?daysPerWeek:Math.ceil(daysPerWeek/2); });
+
   for(let w=1;w<=4;w++){
     for(let d=1;d<=daysPerWeek;d++){
       const exs=[];
       const off=(d-1)%Math.max(top.length,1);
-      const em=top[off%top.length], em2=top[(off+1)%top.length];
+      const sets=rpSetsPerExercise(daysPerWeek,w);
 
-      [em,em2].forEach(muscle=>{
+      // Priority muscles (top 3)
+      top.forEach((muscle,ti)=>{
         if(!muscle) return;
-        const pool=getPool(muscle);
-        const e1=pool[(d-1)%pool.length], e2=pool[d%pool.length];
-        if(e1) exs.push({...e1,muscle,sets:weekSets(w),targetReps:weekTargetReps(w).join('–')});
-        if(e2&&e2.id!==e1?.id) exs.push({...e2,muscle,sets:weekSets(w),targetReps:weekTargetReps(w).join('–')});
+        const freq=muscleFreq[muscle]||daysPerWeek;
+        const exCount=rpExerciseCount(freq, sets*3); // approx sets/session
+        const picks=rpPickExercises(muscle, exCount, d+ti, w);
+        picks.forEach(ex=>{
+          exs.push({...ex,muscle,sets,targetReps:weekTargetReps(w).join('–')});
+        });
       });
 
+      // Coverage pass: ensure at least one exercise per selected category
       const used=new Set(exs.map(e=>e.muscle));
       [[hasU,MUSCLE_GROUPS.upper],[hasL,MUSCLE_GROUPS.lower],[hasA,MUSCLE_GROUPS.accessory]].forEach(([has,cat])=>{
         if(!has||cat.some(m=>used.has(m))) return;
         const fb=all.find(m=>cat.includes(m)); if(!fb) return;
-        const pool=getPool(fb); const ex=pool[d%pool.length];
-        if(ex) exs.push({...ex,muscle:fb,sets:weekSets(w),targetReps:weekTargetReps(w).join('–')});
+        const freq=muscleFreq[fb]||Math.ceil(daysPerWeek/2);
+        const exCount=rpExerciseCount(freq, sets*2);
+        const picks=rpPickExercises(fb, exCount, d, w);
+        picks.forEach(ex=>{
+          exs.push({...ex,muscle:fb,sets,targetReps:weekTargetReps(w).join('–')});
+        });
       });
 
-      sched[`w${w}_d${d}`]={exercises:exs,week:w,day:d};
+      // Non-priority selected muscles — add 1 exercise each if not already covered
+      all.filter(m=>!top.includes(m)).forEach(m=>{
+        if(used.has(m)) return;
+        const freq=muscleFreq[m]||Math.ceil(daysPerWeek/2);
+        const picks=rpPickExercises(m, 1, d, w);
+        if(picks[0]) exs.push({...picks[0],muscle:m,sets,targetReps:weekTargetReps(w).join('–')});
+      });
+
+      // Apply hard caps (Rules 2 & 8)
+      const capped=rpCapExercises(exs);
+
+      sched[`w${w}_d${d}`]={exercises:capped,week:w,day:d};
     }
   }
   return sched;
@@ -1679,20 +1754,21 @@ function confirmBonusWorkout(){
   // Build exercise list from selected muscles (2 exercises per muscle)
   const exercises=[];
   selected.forEach(muscle=>{
-    const pool=getPool(muscle);
-    // Pick first 2 from pool (vary by day to avoid repetition)
-    const offset=new Date(dateKey).getDate()%pool.length;
-    const ex1=pool[offset%pool.length];
-    const ex2=pool[(offset+1)%pool.length];
-    if(ex1) exercises.push({...ex1,muscle,sets:3,targetReps:'8-12'});
-    if(ex2&&ex2.id!==ex1?.id) exercises.push({...ex2,muscle,sets:3,targetReps:'8-12'});
+    // Bonus = typically 1x/week → 2 exercises max (Rule 6), 3 sets each (Rule 1)
+    const exCount=Math.min(2, rpExerciseCount(1, 6));
+    const picks=rpPickExercises(muscle, exCount, new Date(dateKey).getDate(), new Date(dateKey).getMonth());
+    picks.forEach(ex=>{
+      exercises.push({...ex,muscle,sets:3,targetReps:'8-12'});
+    });
   });
+  // Apply hard caps before saving (Rules 2 & 8)
+  const cappedExercises=rpCapExercises(exercises);
 
   // Create or overwrite the session as a bonus session
   DB.sessions[dateKey]={
     date:dateKey, bonus:true,
     programId:prog?.id||null, week:wk, day:null, wkKey:null, workoutNum:null,
-    exercises, sets:{}, feedback:{},
+    exercises:cappedExercises, sets:{}, feedback:{},
     completed:false, hasPain:false, skipped:false
   };
   saveDB();
