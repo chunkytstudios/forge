@@ -289,9 +289,27 @@
     <div>
       <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">IMPORT</div>
       <div style="font-size:11px;color:var(--red);font-family:'DM Mono',monospace;margin-bottom:8px">⚠ This will overwrite all current data.</div>
-      <textarea id="importText" rows="5" placeholder='Paste exported JSON here...' style="resize:vertical;font-family:monospace;font-size:11px"></textarea>
-      <div style="margin-top:10px;display:flex;gap:8px">
-        <button class="btn btn-danger" onclick="importData()">IMPORT & OVERWRITE</button>
+
+      <!-- Option 1: File picker (best on mobile) -->
+      <div style="margin-bottom:12px;padding:12px;border:1px solid var(--border);border-radius:var(--radius2);background:var(--bg3)">
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text2);margin-bottom:8px">OPTION 1 — SELECT FILE <span style="color:var(--green)">(recommended on mobile)</span></div>
+        <label for="importFile" class="btn btn-secondary" style="cursor:pointer;display:inline-flex">
+          📂 CHOOSE BACKUP FILE
+        </label>
+        <input type="file" id="importFile" accept=".json,application/json" style="display:none" onchange="importFromFile(this)">
+        <div id="importFileStatus" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);margin-top:8px"></div>
+      </div>
+
+      <!-- Option 2: Paste fallback -->
+      <div style="padding:12px;border:1px solid var(--border);border-radius:var(--radius2);background:var(--bg3)">
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text2);margin-bottom:8px">OPTION 2 — PASTE JSON</div>
+        <textarea id="importText" rows="4" placeholder='Paste exported JSON here...' style="resize:vertical;font-family:monospace;font-size:11px"></textarea>
+        <div style="margin-top:8px">
+          <button class="btn btn-danger btn-sm" onclick="importData()">IMPORT FROM TEXT</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
         <button class="btn btn-ghost" onclick="closeModal('dataModal')">CANCEL</button>
       </div>
     </div>
@@ -1805,6 +1823,53 @@ function downloadData(){
   toast('Download started!');
 }
 
+function importFromFile(input){
+  const file=input.files[0];
+  if(!file){ return; }
+  const status=document.getElementById('importFileStatus');
+  status.textContent='Reading file...';
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const raw=e.target.result;
+    try{
+      const parsed=JSON.parse(raw);
+      if(typeof parsed!=='object'||Array.isArray(parsed)||!parsed.programs){
+        status.textContent='⚠ Invalid file — does not look like a FORGE backup.';
+        status.style.color='var(--red)';
+        return;
+      }
+      status.textContent=`✓ File loaded: ${file.name}`;
+      status.style.color='var(--green)';
+      // Show confirm button instead of auto-importing
+      status.innerHTML+=`<br><button class="btn btn-danger btn-sm" style="margin-top:8px" onclick="doImport(${JSON.stringify(JSON.stringify(parsed))})">CONFIRM IMPORT & OVERWRITE</button>`;
+    } catch(err){
+      status.textContent='⚠ Could not read file — make sure it is a valid .json backup.';
+      status.style.color='var(--red)';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function doImport(jsonStr){
+  try{
+    const parsed=JSON.parse(jsonStr);
+    if(!confirm('This will replace ALL current data. Are you sure?')) return;
+    DB=parsed;
+    saveDB();
+    for(const muscle in (DB.customExercises||{})){
+      if(!EXERCISES[muscle]) EXERCISES[muscle]=[];
+      (DB.customExercises[muscle]||[]).forEach(c=>{
+        if(!EXERCISES[muscle].find(e=>e.id===c.id)) EXERCISES[muscle].push(c);
+      });
+    }
+    closeModal('dataModal');
+    toast('Import successful!');
+    render();
+  } catch(e){
+    toast('Import failed — invalid data.');
+  }
+}
+
 function importData(){
   const raw=document.getElementById('importText')?.value?.trim();
   if(!raw){toast('Paste your export JSON first');return;}
@@ -1873,6 +1938,105 @@ const SUGGESTED_PROGRAMS = [
     availLabel:'Publicly documented — free',
     link:'https://liftvault.com/programs/bodybuilding/arnold-schwarzenegger-workout-routine-golden-six/',
   },
+  {
+    id:'bro_split',
+    author:'Classic Bodybuilding',
+    name:'The Bro Split',
+    tags:['hypertrophy','intermediate'],
+    desc:"One muscle group per day, 5 days/week. Chest Mon, Back Tue, Shoulders Wed, Arms Thu, Legs Fri. High volume per muscle, once a week frequency. Best for intermediate+ lifters who recover well.",
+    days:5, weeks:12, repsScheme:'4×8–12',
+    focus:'Maximum per-session volume. Classic bodybuilding aesthetics.',
+    availability:'builtin',
+    availLabel:'Built-in',
+  },
+  {
+    id:'ppl',
+    author:'Popularized by Jeff Nippard',
+    name:'Push / Pull / Legs',
+    tags:['hypertrophy','intermediate'],
+    desc:"Push (chest, shoulders, triceps), Pull (back, biceps, rear delts), Legs — run twice per week for 6 days total. Each muscle hit twice weekly. The most evidence-backed hypertrophy split.",
+    days:6, weeks:12, repsScheme:'3–4×6–15',
+    focus:'Efficient grouping, 2x weekly frequency, scales to any level.',
+    availability:'builtin',
+    availLabel:'Built-in',
+  },
+  {
+    id:'upper_lower',
+    author:'Classic split',
+    name:'Upper / Lower',
+    tags:['strength','hypertrophy','intermediate'],
+    desc:"4 days/week. Upper Mon+Thu, Lower Tue+Fri. Big compound lifts first while fresh, accessories follow. Every muscle hit twice per week. Joints get real rest between sessions.",
+    days:4, weeks:12, repsScheme:'3–4×5–12',
+    focus:'Big lifts + accessories. Built for busy people.',
+    availability:'builtin',
+    availLabel:'Built-in',
+  },
+  {
+    id:'full_body',
+    author:'Championed by Jeff Cavaliere',
+    name:'Full Body',
+    tags:['beginner','intermediate','hypertrophy'],
+    desc:"Every muscle every session, 3 days/week (Mon/Wed/Fri). One exercise per muscle group, 45 minutes. Per-session volume is low but weekly volume stacks fast. Clean recovery, no single session buries you.",
+    days:3, weeks:12, repsScheme:'2–3×6–12',
+    focus:'High frequency, low per-session damage, maximum recovery.',
+    availability:'builtin',
+    availLabel:'Built-in',
+  },
+  {
+    id:'arnold_split',
+    author:'Arnold Schwarzenegger',
+    name:'The Arnold Split',
+    tags:['advanced','hypertrophy'],
+    desc:"6 days/week. Day 1: Chest+Back antagonist pairs. Day 2: Shoulders+Arms. Day 3: Legs. Repeat. Every muscle hit twice per week. 90-minute sessions minimum. This built every freak on the Venice boardwalk in 1975.",
+    days:6, weeks:12, repsScheme:'4–5×6–12',
+    focus:'Antagonist supersets, maximum pump, elite weekly volume.',
+    availability:'builtin',
+    availLabel:'Built-in',
+  },
+  {
+    id:'upper_lower_ph',
+    author:'Classic Power/Hypertrophy Split',
+    name:'Upper/Lower Power + Hypertrophy',
+    tags:['intermediate','advanced','strength','hypertrophy'],
+    desc:"4 days/week. Monday: Upper Power (3–5 reps, long rest). Tuesday: Lower Power. Thursday: Upper Hypertrophy (8–12 reps, shorter rest, isolation). Friday: Lower Hypertrophy. Heavy days drive numbers. Volume days drive size.",
+    days:4, weeks:12, repsScheme:'3–5 power / 8–12 hyp',
+    focus:'Dual stimulus per muscle per week. Strength and size together.',
+    availability:'builtin',
+    availLabel:'Built-in',
+  },
+  {
+    id:'phat',
+    author:'Layne Norton',
+    name:'PHAT',
+    tags:['advanced','strength','hypertrophy'],
+    desc:"Power Hypertrophy Adaptive Training. 5 days/week. 2 power days (3–5 reps), 3 hypertrophy days (8–15 reps). Some muscles hit 3x per week. Built for advanced naturals. If you quit by week six, the program is fine — you needed more sleep and food.",
+    days:5, weeks:12, repsScheme:'3–5 power / 8–15 hyp',
+    focus:'Maximum frequency and volume for advanced naturals only.',
+    availability:'builtin',
+    availLabel:'Built-in',
+  },
+  {
+    id:'five_three_one',
+    author:'Jim Wendler',
+    name:'5/3/1',
+    tags:['strength','intermediate','advanced'],
+    desc:"4 days/week, one main lift per day: squat, bench, deadlift, OHP. Work off 90% of your true max. 4-week cycles: 3x5, 3x3, 5/3/1+, deload. Add 5lbs upper / 10lbs lower each cycle. Still progressing in year 5.",
+    days:4, weeks:12, repsScheme:'5s / 3s / 1+',
+    focus:'Long-term strength. Slow, deliberate, unbreakable progression.',
+    availability:'builtin',
+    availLabel:'Built-in',
+  },
+  {
+    id:'texas_method',
+    author:'Mark Rippetoe',
+    name:'Texas Method',
+    tags:['strength','intermediate'],
+    desc:"3 days/week. Monday: Volume (5x5 heavy — this breaks you). Wednesday: Recovery (2x5 at 80% — prep for Friday). Friday: Intensity (1x5 PR — add 5lbs, go home). PR every single week until you cannot.",
+    days:3, weeks:12, repsScheme:'5x5 / 2x5 / 1x5',
+    focus:'Weekly PRs. Stress-recovery-adaptation in one week.',
+    availability:'builtin',
+    availLabel:'Built-in',
+  },
 ];
 
 function renderSuggestions(){
@@ -1925,7 +2089,16 @@ function loadSuggestedProgram(id){
   if(id==='jakes_5x5') loadJakes5x5();
   else if(id==='beginner_program') loadBeginnerProgram();
   else if(id==='arnold_golden_six') loadArnoldGoldenSix();
-  else toast('Select muscles below to build this program.');
+  else if(id==='bro_split') loadBroSplit();
+  else if(id==='ppl') loadPPL();
+  else if(id==='upper_lower') loadUpperLower();
+  else if(id==='full_body') loadFullBody();
+  else if(id==='arnold_split') loadArnoldSplit();
+  else if(id==='upper_lower_ph') loadUpperLowerPH();
+  else if(id==='phat') loadPHAT();
+  else if(id==='five_three_one') load531();
+  else if(id==='texas_method') loadTexasMethod();
+  else toast('Program not found.');
 }
 
 // ── JAKE'S 5×5 ──────────────────────────────────────────────────────────────
@@ -2073,6 +2246,420 @@ function loadArnoldGoldenSix(){
   });
   DB.activeProgram=id;
   saveDB();toast("Arnold's Golden Six loaded!");switchView('dashboard');
+}
+
+// ============================================================
+// BRO SPLIT — 5 days, one muscle group per day, 12 weeks
+// ============================================================
+function loadBroSplit(){
+  DB.programs.forEach(p=>p.active=false);
+  const id='prog_'+Date.now();
+  const schedule={};
+  // Day pattern: 1=Chest, 2=Back, 3=Shoulders, 4=Arms(bi+tri), 5=Legs
+  // Rule 1: ≤5 sets/ex. Rule 2: ≤12 sets/muscle. Rule 7: 1x/week + ~12 sets = 3 exercises.
+  // Rule 8: ≤4 exercises/muscle. 3 ex × 4 sets = 12 sets — exactly at volume cap for 1x/week.
+  const DAY_MUSCLES=[
+    [{m:'chest',n:3}],                                            // 3 ex × 4 sets = 12 ✓
+    [{m:'back',n:3}],                                             // 3 ex × 4 sets = 12 ✓
+    [{m:'shoulders',n:2},{m:'traps',n:2}],                        // 2 ex × 4 sets = 8 ✓
+    [{m:'biceps',n:2},{m:'triceps',n:2}],                         // 2 ex × 4 sets = 8 ✓
+    [{m:'quads',n:2},{m:'hamstrings',n:2},{m:'glutes',n:1},{m:'calves',n:2}], // balanced leg day
+  ];
+  for(let w=1;w<=12;w++){
+    for(let d=1;d<=5;d++){
+      const groups=DAY_MUSCLES[d-1];
+      const exs=[];
+      groups.forEach(({m,n})=>{
+        const pool=getPool(m);
+        for(let i=0;i<Math.min(n,pool.length);i++){
+          const ex=pool[(w-1+i)%pool.length];
+          exs.push({...ex,muscle:m,sets:4,targetReps:'8–12'});
+        }
+      });
+      schedule[`w${w}_d${d}`]={exercises:rpCapExercises(exs),week:w,day:d};
+    }
+  }
+  DB.programs.push({id,name:'The Bro Split',daysPerWeek:5,
+    muscles:['chest','back','shoulders','traps','biceps','triceps','quads','hamstrings','glutes','calves'],
+    priority:'chest,back,shoulders,biceps,triceps,quads,hamstrings,glutes,traps,calves',
+    schedule,startDate:todayStr(),active:true,totalWeeks:12});
+  DB.activeProgram=id;
+  saveDB();toast('Bro Split loaded!');switchView('dashboard');
+}
+
+// ============================================================
+// PUSH / PULL / LEGS — 6-day (hits each muscle 2x/week)
+// ============================================================
+function loadPPL(){
+  DB.programs.forEach(p=>p.active=false);
+  const id='prog_'+Date.now();
+  const schedule={};
+  // 6-day rotation: Push, Pull, Legs, Push, Pull, Legs — within each "week" slot
+  // We map to 4-week mesocycle using w1-4, d1-6
+  const PUSH=[{m:'chest',n:2},{m:'shoulders',n:2},{m:'triceps',n:1}];
+  const PULL=[{m:'back',n:2},{m:'biceps',n:2},{m:'traps',n:1}];
+  const LEGS=[{m:'quads',n:2},{m:'hamstrings',n:1},{m:'glutes',n:2},{m:'calves',n:1}];
+  const DAYS=[PUSH,PULL,LEGS,PUSH,PULL,LEGS];
+
+  for(let w=1;w<=4;w++){
+    for(let d=1;d<=6;d++){
+      const groups=DAYS[d-1];
+      const exs=[];
+      const isSecondHalf=d>3;
+      groups.forEach(({m,n})=>{
+        const pool=getPool(m);
+        // Second half of week uses different exercise indices for variety
+        const offset=isSecondHalf?Math.floor(pool.length/2):0;
+        for(let i=0;i<Math.min(n,pool.length);i++){
+          const ex=pool[(offset+w-1+i)%pool.length];
+          exs.push({...ex,muscle:m,sets:3,targetReps:weekTargetReps(w).join('–')});
+        }
+      });
+      schedule[`w${w}_d${d}`]={exercises:rpCapExercises(exs),week:w,day:d};
+    }
+  }
+  DB.programs.push({id,name:'Push / Pull / Legs',daysPerWeek:6,
+    muscles:['chest','shoulders','triceps','back','biceps','traps','quads','hamstrings','glutes','calves'],
+    priority:'chest,back,shoulders,biceps,triceps,quads,hamstrings,glutes,traps,calves',
+    schedule,startDate:todayStr(),active:true,totalWeeks:12});
+  DB.activeProgram=id;
+  saveDB();toast('PPL loaded!');switchView('dashboard');
+}
+
+// ============================================================
+// UPPER / LOWER — 4 days, each muscle 2x/week
+// ============================================================
+function loadUpperLower(){
+  DB.programs.forEach(p=>p.active=false);
+  const id='prog_'+Date.now();
+  const schedule={};
+  const UPPER=[{m:'chest',n:2},{m:'back',n:2},{m:'shoulders',n:1},{m:'biceps',n:1},{m:'triceps',n:1}];
+  const LOWER=[{m:'quads',n:2},{m:'hamstrings',n:2},{m:'glutes',n:1},{m:'calves',n:1}];
+  const DAYS=[UPPER,LOWER,UPPER,LOWER];
+
+  for(let w=1;w<=4;w++){
+    for(let d=1;d<=4;d++){
+      const groups=DAYS[d-1];
+      const exs=[];
+      const isSecondUpper=d===3, isSecondLower=d===4;
+      groups.forEach(({m,n})=>{
+        const pool=getPool(m);
+        const offset=(isSecondUpper||isSecondLower)?Math.floor(pool.length/2):0;
+        for(let i=0;i<Math.min(n,pool.length);i++){
+          const ex=pool[(offset+w-1+i)%pool.length];
+          const sets=m==='chest'||m==='back'||m==='quads'?4:3;
+          exs.push({...ex,muscle:m,sets,targetReps:weekTargetReps(w).join('–')});
+        }
+      });
+      schedule[`w${w}_d${d}`]={exercises:rpCapExercises(exs),week:w,day:d};
+    }
+  }
+  DB.programs.push({id,name:'Upper / Lower',daysPerWeek:4,
+    muscles:['chest','back','shoulders','biceps','triceps','quads','hamstrings','glutes','calves'],
+    priority:'chest,back,quads,hamstrings,shoulders,biceps,triceps,glutes,calves',
+    schedule,startDate:todayStr(),active:true,totalWeeks:12});
+  DB.activeProgram=id;
+  saveDB();toast('Upper/Lower loaded!');switchView('dashboard');
+}
+
+// ============================================================
+// FULL BODY — 3 days, all muscles each session
+// ============================================================
+function loadFullBody(){
+  DB.programs.forEach(p=>p.active=false);
+  const id='prog_'+Date.now();
+  const schedule={};
+  // One exercise per muscle per session, rotate selections each session
+  const MUSCLES=[
+    {m:'quads'},{m:'hamstrings'},{m:'glutes'},
+    {m:'chest'},{m:'back'},{m:'shoulders'},
+    {m:'biceps'},{m:'triceps'},{m:'calves'},{m:'core'},
+  ];
+  for(let w=1;w<=4;w++){
+    for(let d=1;d<=3;d++){
+      const exs=[];
+      MUSCLES.forEach(({m})=>{
+        const pool=getPool(m);
+        // Rotate by day+week to minimize redundancy (Rule 9)
+        const ex=pool[((d-1)*3+(w-1))%pool.length];
+        if(ex) exs.push({...ex,muscle:m,sets:3,targetReps:weekTargetReps(w).join('–')});
+      });
+      schedule[`w${w}_d${d}`]={exercises:rpCapExercises(exs),week:w,day:d};
+    }
+  }
+  DB.programs.push({id,name:'Full Body',daysPerWeek:3,
+    muscles:['quads','hamstrings','glutes','chest','back','shoulders','biceps','triceps','calves','core'],
+    priority:'chest,back,quads,hamstrings,shoulders,biceps,triceps,glutes,calves,core',
+    schedule,startDate:todayStr(),active:true,totalWeeks:12});
+  DB.activeProgram=id;
+  saveDB();toast('Full Body loaded!');switchView('dashboard');
+}
+
+// ============================================================
+// ARNOLD SPLIT — 6 days, chest+back / shoulders+arms / legs
+// ============================================================
+function loadArnoldSplit(){
+  DB.programs.forEach(p=>p.active=false);
+  const id='prog_'+Date.now();
+  const schedule={};
+  // Day 1: Chest+Back (antagonist pairs), Day 2: Shoulders+Arms, Day 3: Legs — repeat
+  // Rule 6: 2x/week frequency → 2 exercises per muscle per session.
+  // 2 ex × 4 sets = 8 sets/muscle/session. ✓ Rule 1,2,3,4,6 all satisfied.
+  const DAY1=[{m:'chest',n:2},{m:'back',n:2}];                   // 8 sets each ✓
+  const DAY2=[{m:'shoulders',n:2},{m:'biceps',n:2},{m:'triceps',n:2},{m:'traps',n:1}]; // 8/8/8/4 ✓
+  const DAY3=[{m:'quads',n:2},{m:'hamstrings',n:2},{m:'glutes',n:1},{m:'calves',n:2}]; // balanced ✓
+  const DAYS=[DAY1,DAY2,DAY3,DAY1,DAY2,DAY3];
+
+  for(let w=1;w<=4;w++){
+    for(let d=1;d<=6;d++){
+      const groups=DAYS[d-1];
+      const exs=[];
+      const isRepeat=d>3;
+      groups.forEach(({m,n})=>{
+        const pool=getPool(m);
+        const offset=isRepeat?Math.ceil(pool.length/2):0;
+        for(let i=0;i<Math.min(n,pool.length);i++){
+          const ex=pool[(offset+w-1+i)%pool.length];
+          exs.push({...ex,muscle:m,sets:4,targetReps:'6–12'});
+        }
+      });
+      schedule[`w${w}_d${d}`]={exercises:rpCapExercises(exs),week:w,day:d};
+    }
+  }
+  DB.programs.push({id,name:'The Arnold Split',daysPerWeek:6,
+    muscles:['chest','back','shoulders','biceps','triceps','traps','quads','hamstrings','glutes','calves'],
+    priority:'chest,back,shoulders,quads,biceps,triceps,hamstrings,glutes,traps,calves',
+    schedule,startDate:todayStr(),active:true,totalWeeks:12});
+  DB.activeProgram=id;
+  saveDB();toast('Arnold Split loaded!');switchView('dashboard');
+}
+
+// ============================================================
+// UPPER/LOWER POWER + HYPERTROPHY — 4 days
+// ============================================================
+function loadUpperLowerPH(){
+  DB.programs.forEach(p=>p.active=false);
+  const id='prog_'+Date.now();
+  const schedule={};
+  // Day 1: Upper Power, Day 2: Lower Power, Day 3: Upper Hyp, Day 4: Lower Hyp
+  const UPPER_POWER=[
+    {m:'chest',ex:'flat_bench',sets:4,reps:'3–5'},
+    {m:'back',ex:'bent_row',sets:4,reps:'3–5'},
+    {m:'shoulders',ex:'ohp',sets:3,reps:'3–5'},
+    {m:'triceps',ex:'close_grip_bench',sets:3,reps:'4–6'},
+    {m:'biceps',ex:'ez_curl',sets:3,reps:'4–6'},
+  ];
+  const LOWER_POWER=[
+    {m:'quads',ex:'squat',sets:4,reps:'3–5'},
+    {m:'hamstrings',ex:'deadlift',sets:3,reps:'3–5'},
+    {m:'glutes',ex:'hip_thrust',sets:3,reps:'4–6'},
+  ];
+  const UPPER_HYP=[
+    {m:'chest',ex:'db_incline',sets:3,reps:'8–12'},
+    {m:'chest',ex:'cable_fly',sets:3,reps:'10–15'},
+    {m:'back',ex:'lat_pulldown',sets:3,reps:'8–12'},
+    {m:'back',ex:'cable_row',sets:3,reps:'10–12'},
+    {m:'shoulders',ex:'lateral_raise',sets:3,reps:'12–15'},
+    {m:'biceps',ex:'cable_curl',sets:3,reps:'10–15'},
+    {m:'triceps',ex:'cable_pushdown',sets:3,reps:'10–15'},
+  ];
+  const LOWER_HYP=[
+    {m:'quads',ex:'leg_press',sets:3,reps:'10–15'},
+    {m:'quads',ex:'leg_extension',sets:3,reps:'12–15'},
+    {m:'hamstrings',ex:'leg_curl',sets:3,reps:'10–15'},
+    {m:'glutes',ex:'machine_hip_thrust',sets:3,reps:'12–15'},
+    {m:'calves',ex:'standing_calf',sets:3,reps:'12–15'},
+  ];
+
+  function buildDay(template,w){
+    return template.map(t=>{
+      const pool=getPool(t.m);
+      const ex=pool.find(e=>e.id===t.ex)||pool[(w-1)%pool.length];
+      return {...ex,muscle:t.m,sets:t.sets,targetReps:t.reps};
+    });
+  }
+
+  const DAYS=[UPPER_POWER,LOWER_POWER,UPPER_HYP,LOWER_HYP];
+  for(let w=1;w<=4;w++){
+    for(let d=1;d<=4;d++){
+      const exs=buildDay(DAYS[d-1],w);
+      schedule[`w${w}_d${d}`]={exercises:rpCapExercises(exs),week:w,day:d};
+    }
+  }
+  DB.programs.push({id,name:'Upper/Lower Power + Hypertrophy',daysPerWeek:4,
+    muscles:['chest','back','shoulders','biceps','triceps','quads','hamstrings','glutes','calves'],
+    priority:'chest,back,quads,hamstrings,shoulders,biceps,triceps,glutes,calves',
+    schedule,startDate:todayStr(),active:true,totalWeeks:12});
+  DB.activeProgram=id;
+  saveDB();toast('Upper/Lower P+H loaded!');switchView('dashboard');
+}
+
+// ============================================================
+// PHAT — 5 days (Power Hypertrophy Adaptive Training, Layne Norton)
+// ============================================================
+function loadPHAT(){
+  DB.programs.forEach(p=>p.active=false);
+  const id='prog_'+Date.now();
+  const schedule={};
+  // Day 1: Upper Power, Day 2: Lower Power,
+  // Day 3: Back+Shoulders Hyp, Day 4: Chest+Arms Hyp, Day 5: Lower Hyp
+  const D1=[
+    {m:'back',ex:'bent_row',s:3,r:'3–5'},{m:'back',ex:'pullup',s:3,r:'6–10'},
+    {m:'chest',ex:'flat_bench',s:3,r:'3–5'},{m:'chest',ex:'db_incline',s:3,r:'6–10'},
+    {m:'shoulders',ex:'ohp',s:3,r:'3–5'},
+    {m:'biceps',ex:'ez_curl',s:3,r:'6–10'},{m:'triceps',ex:'skull_crusher',s:3,r:'6–10'},
+  ];
+  const D2=[
+    {m:'quads',ex:'squat',s:3,r:'3–5'},{m:'hamstrings',ex:'rdl',s:3,r:'3–5'},
+    {m:'glutes',ex:'hip_thrust',s:3,r:'6–10'},{m:'calves',ex:'standing_calf',s:3,r:'6–10'},
+  ];
+  const D3=[
+    {m:'back',ex:'lat_pulldown',s:4,r:'8–12'},{m:'back',ex:'cable_row',s:4,r:'8–12'},
+    {m:'back',ex:'chest_supported',s:3,r:'8–12'},
+    {m:'shoulders',ex:'db_ohp',s:4,r:'8–12'},{m:'shoulders',ex:'lateral_raise',s:4,r:'12–15'},
+    {m:'traps',ex:'cable_shrug',s:3,r:'10–15'},
+  ];
+  const D4=[
+    {m:'chest',ex:'incline_bench',s:4,r:'8–12'},{m:'chest',ex:'cable_fly',s:4,r:'10–15'},
+    {m:'chest',ex:'pec_deck',s:3,r:'10–15'},
+    {m:'biceps',ex:'preacher_curl',s:4,r:'8–12'},{m:'biceps',ex:'hammer_curl',s:3,r:'10–15'},
+    {m:'triceps',ex:'cable_pushdown',s:4,r:'8–12'},{m:'triceps',ex:'overhead_ext',s:3,r:'10–15'},
+  ];
+  const D5=[
+    {m:'quads',ex:'leg_press',s:4,r:'8–15'},{m:'quads',ex:'hack_squat',s:3,r:'10–15'},
+    {m:'hamstrings',ex:'leg_curl',s:4,r:'8–12'},{m:'hamstrings',ex:'seated_leg_curl',s:3,r:'10–15'},
+    {m:'glutes',ex:'machine_hip_thrust',s:3,r:'12–15'},
+    {m:'calves',ex:'seated_calf',s:4,r:'12–15'},
+  ];
+
+  function buildPHATDay(template,w){
+    return rpCapExercises(template.map(t=>{
+      const pool=getPool(t.m);
+      const ex=pool.find(e=>e.id===t.ex)||pool[(w-1)%pool.length];
+      return {...ex,muscle:t.m,sets:t.s,targetReps:t.r};
+    }));
+  }
+
+  const DAYS=[D1,D2,D3,D4,D5];
+  for(let w=1;w<=4;w++){
+    for(let d=1;d<=5;d++){
+      schedule[`w${w}_d${d}`]={exercises:buildPHATDay(DAYS[d-1],w),week:w,day:d};
+    }
+  }
+  DB.programs.push({id,name:'PHAT',daysPerWeek:5,
+    muscles:['chest','back','shoulders','biceps','triceps','traps','quads','hamstrings','glutes','calves'],
+    priority:'back,chest,quads,hamstrings,shoulders,biceps,triceps,glutes,traps,calves',
+    schedule,startDate:todayStr(),active:true,totalWeeks:12});
+  DB.activeProgram=id;
+  saveDB();toast('PHAT loaded!');switchView('dashboard');
+}
+
+// ============================================================
+// 5/3/1 — Jim Wendler (4 days, one main lift per day)
+// ============================================================
+function load531(){
+  DB.programs.forEach(p=>p.active=false);
+  const id='prog_'+Date.now();
+  const schedule={};
+  // Day 1: OHP, Day 2: Deadlift, Day 3: Bench, Day 4: Squat
+  // Week 1: 3×5, Week 2: 3×3, Week 3: 5/3/1+, Week 4: Deload
+  const MAIN=[
+    {m:'shoulders',ex:'ohp',label:'OHP Day'},
+    {m:'hamstrings',ex:'deadlift',label:'Deadlift Day'},
+    {m:'chest',ex:'flat_bench',label:'Bench Day'},
+    {m:'quads',ex:'squat',label:'Squat Day'},
+  ];
+  const WEEK_SCHEMES=[
+    {sets:3,reps:'5+',note:'3 sets of 5. Last set AMRAP.'},
+    {sets:3,reps:'3+',note:'3 sets of 3. Last set AMRAP.'},
+    {sets:3,reps:'5/3/1+',note:'1×5, 1×3, 1×1+. Last set AMRAP.'},
+    {sets:2,reps:'5 (deload)',note:'Deload week. Light weight, perfect form.'},
+  ];
+  // Accessories (Boring But Big style): main lift @ 5×10 + complementary
+  // BBB (Boring But Big) accessories. Main lift already takes 3 sets.
+  // Rule 2: ≤12 sets/muscle. Main(3 sets) + BBB(3 sets) = 6 sets. ✓
+  // Using 3×10 BBB (not 5×10) to stay within 12-set cap across the session.
+  const ACCESSORIES={
+    shoulders:[{m:'shoulders',ex:'db_ohp',s:3,r:'10'},{m:'triceps',ex:'cable_pushdown',s:3,r:'10–12'},{m:'back',ex:'cable_row',s:3,r:'10'}],
+    hamstrings:[{m:'hamstrings',ex:'rdl',s:3,r:'10'},{m:'glutes',ex:'hip_thrust',s:3,r:'10'},{m:'quads',ex:'leg_press',s:3,r:'10'}],
+    chest:[{m:'chest',ex:'db_flat',s:3,r:'10'},{m:'biceps',ex:'ez_curl',s:3,r:'10–12'},{m:'back',ex:'lat_pulldown',s:3,r:'10'}],
+    quads:[{m:'quads',ex:'leg_press',s:3,r:'10'},{m:'hamstrings',ex:'leg_curl',s:3,r:'10'},{m:'calves',ex:'standing_calf',s:3,r:'10'}],
+  };
+
+  for(let w=1;w<=4;w++){
+    const scheme=WEEK_SCHEMES[w-1];
+    for(let d=1;d<=4;d++){
+      const main=MAIN[d-1];
+      const pool=getPool(main.m);
+      const mainEx=pool.find(e=>e.id===main.ex)||pool[0];
+      const exs=[{...mainEx,muscle:main.m,sets:scheme.sets,targetReps:scheme.reps,notes:scheme.note}];
+      // Accessories (skip on deload week)
+      if(w<4){
+        const acc=ACCESSORIES[main.m]||[];
+        acc.forEach(a=>{
+          const aPool=getPool(a.m);
+          const aEx=aPool.find(e=>e.id===a.ex)||aPool[0];
+          if(aEx) exs.push({...aEx,muscle:a.m,sets:a.s,targetReps:a.r});
+        });
+      }
+      schedule[`w${w}_d${d}`]={exercises:rpCapExercises(exs),week:w,day:d};
+    }
+  }
+  DB.programs.push({id,name:'5/3/1',daysPerWeek:4,
+    muscles:['shoulders','hamstrings','chest','quads','triceps','biceps','back','glutes','calves'],
+    priority:'shoulders,chest,quads,hamstrings,back,triceps,biceps,glutes,calves',
+    schedule,startDate:todayStr(),active:true,totalWeeks:12});
+  DB.activeProgram=id;
+  saveDB();toast('5/3/1 loaded!');switchView('dashboard');
+}
+
+// ============================================================
+// TEXAS METHOD — 3 days, weekly PRs (Mark Rippetoe)
+// ============================================================
+function loadTexasMethod(){
+  DB.programs.forEach(p=>p.active=false);
+  const id='prog_'+Date.now();
+  const schedule={};
+  // Main lifts: Squat every day, Bench/Press alternate, Deadlift on Friday
+  // Mon: Volume 5×5 heavy | Wed: Recovery 2×5 @ 80% | Fri: Intensity 1×5 PR
+  const VOLUME_NOTE='Volume day — 5×5 heavy. This is the day that breaks you.';
+  const RECOV_NOTE='Recovery day — 2×5 at ~80% of Monday. Prep for Friday.';
+  const INTENS_NOTE='Intensity day — 1×5 PR. Add 5lbs and go home.';
+
+  for(let w=1;w<=4;w++){
+    const benchVariant=w%2===1?'flat_bench':'incline_bench';
+    const pressVariant=w%2===1?'ohp':'db_ohp';
+
+    // Day 1: Volume
+    schedule[`w${w}_d1`]={week:w,day:1,exercises:rpCapExercises([
+      {...(getPool('quads').find(e=>e.id==='squat')||getPool('quads')[0]),muscle:'quads',sets:5,targetReps:'5',notes:VOLUME_NOTE},
+      {...(getPool('chest').find(e=>e.id===benchVariant)||getPool('chest')[0]),muscle:'chest',sets:5,targetReps:'5',notes:VOLUME_NOTE},
+      {...(getPool('back').find(e=>e.id==='bent_row')||getPool('back')[0]),muscle:'back',sets:3,targetReps:'5'},
+      {...(getPool('core').find(e=>e.id==='cable_crunch')||getPool('core')[0]),muscle:'core',sets:3,targetReps:'10'},
+    ])};
+
+    // Day 2: Recovery
+    schedule[`w${w}_d2`]={week:w,day:2,exercises:rpCapExercises([
+      {...(getPool('quads').find(e=>e.id==='squat')||getPool('quads')[0]),muscle:'quads',sets:2,targetReps:'5',notes:RECOV_NOTE},
+      {...(getPool('shoulders').find(e=>e.id===pressVariant)||getPool('shoulders')[0]),muscle:'shoulders',sets:3,targetReps:'5',notes:RECOV_NOTE},
+      {...(getPool('back').find(e=>e.id==='lat_pulldown')||getPool('back')[0]),muscle:'back',sets:3,targetReps:'8'},
+      {...(getPool('biceps')[0]),muscle:'biceps',sets:3,targetReps:'10'},
+    ])};
+
+    // Day 3: Intensity
+    schedule[`w${w}_d3`]={week:w,day:3,exercises:rpCapExercises([
+      {...(getPool('quads').find(e=>e.id==='squat')||getPool('quads')[0]),muscle:'quads',sets:1,targetReps:'5 (PR)',notes:INTENS_NOTE},
+      {...(getPool('chest').find(e=>e.id===benchVariant)||getPool('chest')[0]),muscle:'chest',sets:1,targetReps:'5 (PR)',notes:INTENS_NOTE},
+      {...(getPool('hamstrings').find(e=>e.id==='deadlift')||getPool('hamstrings')[0]),muscle:'hamstrings',sets:1,targetReps:'5 (PR)',notes:'Deadlift — PR and go home.'},
+    ])};
+  }
+
+  DB.programs.push({id,name:'Texas Method',daysPerWeek:3,
+    muscles:['quads','chest','back','shoulders','hamstrings','core','biceps'],
+    priority:'quads,chest,hamstrings,shoulders,back,biceps,core',
+    schedule,startDate:todayStr(),active:true,totalWeeks:12});
+  DB.activeProgram=id;
+  saveDB();toast('Texas Method loaded!');switchView('dashboard');
 }
 </script>
 </body>
