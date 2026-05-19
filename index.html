@@ -744,8 +744,25 @@ function renderWorkout(){
 
   if(log.completed) return `<div class="empty-state"><span class="big">DONE</span><div style="color:var(--green);margin-bottom:16px">✓ Today's workout is complete.</div>
     <button class="btn btn-secondary" onclick="openBonusModal('${today}')">+ ADD BONUS WORKOUT</button></div>`;
-  if(log.skipped) return `<div class="empty-state"><span class="big">SKIPPED</span><div class="text-muted">${log.skipReason||''}</div>
-    <div style="margin-top:16px"><button class="btn btn-secondary" onclick="openBonusModal('${today}')">+ ADD BONUS WORKOUT</button></div></div>`;
+  if(log.skipped){
+    // Skipped date — don't block the workout. Let them start it anyway or add bonus.
+    // The skip is logged for the calendar; the workout slot is not consumed.
+    // Remove the blocking log so workout can initialize fresh.
+    const skipReason=log.skipReason;
+    delete DB.sessions[today];
+    saveDB();
+    // Re-init from next program workout
+    const curW2=getCurrentWorkout(prog);
+    if(!curW2) return `<div class="empty-state"><span class="big">ALL DONE</span>
+      <div style="margin-bottom:20px;color:var(--text2)">All program workouts complete.</div>
+      <button class="btn btn-secondary" onclick="openBonusModal('${today}')">+ ADD BONUS WORKOUT</button></div>`;
+    DB.sessions[today]={date:today,programId:prog.id,wkKey:curW2.key,workoutNum:curW2.num,
+      week:curW2.wk,day:curW2.dy,skippedPreviously:skipReason,
+      exercises:JSON.parse(JSON.stringify(curW2.plan.exercises)),
+      sets:{},feedback:{},completed:false,hasPain:false,skipped:false,bonus:false};
+    saveDB();
+    log=DB.sessions[today];
+  }
 
   const isBonus=!!log.bonus;
   const wNum=log.workoutNum;
@@ -1575,13 +1592,17 @@ function rpPickExercises(muscle, count, dayOffset, weekOffset){
   if(!pool.length) return [];
   const picked=[];
   const usedIdx=new Set();
+  const usedIds=new Set();
   // Stride through pool using day+week offset to ensure variation across sessions
-  let baseIdx=(dayOffset*3+weekOffset*7)%pool.length;
-  for(let i=0;i<count&&picked.length<count;i++){
+  const baseIdx=(dayOffset*3+weekOffset*7)%pool.length;
+  // Walk the whole pool from baseIdx, wrapping around, skipping already-picked
+  for(let i=0;i<pool.length&&picked.length<count;i++){
     const idx=(baseIdx+i)%pool.length;
-    if(!usedIdx.has(idx)){
+    const ex=pool[idx];
+    if(!usedIdx.has(idx)&&!usedIds.has(ex.id)){
       usedIdx.add(idx);
-      picked.push(pool[idx]);
+      usedIds.add(ex.id);
+      picked.push(ex);
     }
   }
   return picked;
@@ -1769,18 +1790,26 @@ function confirmBonusWorkout(){
   const prog=getActiveProg();
   const wk=prog?getWeek(prog):1;
 
-  // Build exercise list from selected muscles (2 exercises per muscle)
+  // Build exercise list — 1 exercise per muscle for bonus (keeps session focused)
+  // Rule 5 spirit: treat bonus as 1x hit → 2 ex max per muscle, but cap total at 10
   const exercises=[];
+  const usedExIds=new Set(); // Rule 9: no duplicate exercises in session
+  const dateObj=new Date(dateKey);
   selected.forEach(muscle=>{
-    // Bonus = typically 1x/week → 2 exercises max (Rule 6), 3 sets each (Rule 1)
-    const exCount=Math.min(2, rpExerciseCount(1, 6));
-    const picks=rpPickExercises(muscle, exCount, new Date(dateKey).getDate(), new Date(dateKey).getMonth());
-    picks.forEach(ex=>{
-      exercises.push({...ex,muscle,sets:3,targetReps:'8-12'});
-    });
+    // For bonus: if ≤5 muscles selected use 2 ex, otherwise 1 ex to keep total sane
+    const exCount=selected.length<=5?Math.min(2,rpExerciseCount(1,6)):1;
+    const picks=rpPickExercises(muscle, exCount+2, dateObj.getDate(), dateObj.getMonth());
+    let added=0;
+    for(const ex of picks){
+      if(added>=exCount) break;
+      if(usedExIds.has(ex.id)) continue; // Rule 9: skip duplicate
+      usedExIds.add(ex.id);
+      exercises.push({...ex,muscle,sets:3,targetReps:'8–12'});
+      added++;
+    }
   });
-  // Apply hard caps before saving (Rules 2 & 8)
-  const cappedExercises=rpCapExercises(exercises);
+  // Apply RP hard caps (Rules 2 & 8) then enforce session total cap of 10
+  const cappedExercises=rpCapExercises(exercises).slice(0,10);
 
   // Create or overwrite the session as a bonus session
   DB.sessions[dateKey]={
