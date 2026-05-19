@@ -1639,28 +1639,31 @@ function buildSchedule(priorities,daysPerWeek){
       });
 
       // Coverage pass: ensure at least one exercise per selected category
+      // Always exactly 1 exercise. Pick the HIGHEST-PRIORITY muscle from user's
+      // selection in that category (respects priority order, not MUSCLE_GROUPS order).
       const used=new Set(exs.map(e=>e.muscle));
       [[hasU,MUSCLE_GROUPS.upper],[hasL,MUSCLE_GROUPS.lower],[hasA,MUSCLE_GROUPS.accessory]].forEach(([has,cat])=>{
         if(!has||cat.some(m=>used.has(m))) return;
+        // Pick highest-priority selected muscle in this category
         const fb=all.find(m=>cat.includes(m)); if(!fb) return;
-        const freq=muscleFreq[fb]||Math.ceil(daysPerWeek/2);
-        const exCount=rpExerciseCount(freq, sets*2);
-        const picks=rpPickExercises(fb, exCount, d, w);
-        picks.forEach(ex=>{
-          exs.push({...ex,muscle:fb,sets,targetReps:weekTargetReps(w).join('–')});
-        });
+        const picks=rpPickExercises(fb, 1, d, w); // always exactly 1
+        if(picks[0]) exs.push({...picks[0],muscle:fb,sets,targetReps:weekTargetReps(w).join('–')});
       });
 
-      // Non-priority selected muscles — add 1 exercise each if not already covered
-      all.filter(m=>!top.includes(m)).forEach(m=>{
-        if(used.has(m)) return;
-        const freq=muscleFreq[m]||Math.ceil(daysPerWeek/2);
-        const picks=rpPickExercises(m, 1, d, w);
-        if(picks[0]) exs.push({...picks[0],muscle:m,sets,targetReps:weekTargetReps(w).join('–')});
-      });
+      // Non-priority selected muscles — skip entirely if not in top priorities.
+      // They only appear via coverage above. This prevents low-priority muscles
+      // (like calves) from accumulating extra exercises beyond coverage.
+      // (Removed the extra non-priority loop that was causing calves overrepresentation)
 
+      // Deduplicate by exercise id within session (Rule 9)
+      const seenIds=new Set();
+      const deduped=exs.filter(ex=>{
+        if(seenIds.has(ex.id)) return false;
+        seenIds.add(ex.id);
+        return true;
+      });
       // Apply hard caps (Rules 2 & 8)
-      const capped=rpCapExercises(exs);
+      const capped=rpCapExercises(deduped);
 
       sched[`w${w}_d${d}`]={exercises:capped,week:w,day:d};
     }
