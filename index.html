@@ -215,6 +215,42 @@
   .prog-avail.paid{color:var(--text3);}
   .prog-avail.builtin{color:var(--accent);}
   .suggest-section-label{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.1em;color:var(--text2);margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+
+  /* CARDIO */
+  .cardio-type-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:16px;}
+  .cardio-type-btn{border:1px solid var(--border);border-radius:var(--radius2);padding:10px 12px;cursor:pointer;background:var(--bg3);transition:all .15s;text-align:center;}
+  .cardio-type-btn:hover{border-color:var(--border2);}
+  .cardio-type-btn.selected{border-color:var(--blue);background:rgba(68,136,255,.08);}
+  .cardio-type-icon{font-size:22px;margin-bottom:4px;}
+  .cardio-type-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;}
+  .cardio-log-row{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius2);margin-bottom:8px;background:var(--bg3);}
+  .cardio-log-icon{font-size:16px;flex-shrink:0;}
+  .cardio-log-body{flex:1;}
+  .cardio-log-title{font-size:13px;font-weight:500;margin-bottom:2px;}
+  .cardio-log-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);}
+  .cardio-badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:10px;font-family:'DM Mono',monospace;letter-spacing:.05em;text-transform:uppercase;background:rgba(68,136,255,.12);color:#4488ff;border:1px solid rgba(68,136,255,.3);}
+
+  /* ACHIEVEMENTS */
+  .achievement-collapsible{margin-top:16px;border-top:1px solid var(--border);padding-top:12px;}
+  .achievement-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:4px 0;}
+  .achievement-toggle-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;}
+  .achievement-toggle-chev{font-size:11px;color:var(--text3);transition:transform .2s;}
+  .achievement-toggle-chev.open{transform:rotate(180deg);}
+  .achievement-body{display:none;margin-top:12px;}
+  .achievement-body.open{display:block;}
+  .achievement-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;}
+  .ach-card{border-radius:var(--radius2);padding:12px 14px;border:1px solid;}
+  .ach-card.earned{background:rgba(232,255,71,.04);border-color:rgba(232,255,71,.2);}
+  .ach-card.locked{background:var(--bg);border-color:var(--border);opacity:.45;}
+  .ach-icon{font-size:22px;margin-bottom:6px;}
+  .ach-title{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:.06em;margin-bottom:3px;}
+  .ach-card.earned .ach-title{color:var(--accent);}
+  .ach-card.locked .ach-title{color:var(--text2);}
+  .ach-desc{font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:6px;}
+  .ach-stat{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);}
+  .ach-card.earned .ach-stat{color:var(--text2);}
+  .ach-date{font-family:'DM Mono',monospace;font-size:9px;color:var(--accent);margin-top:4px;letter-spacing:.06em;}
+  .ach-section-label{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.1em;color:var(--text3);margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border);}
 </style>
 </head>
 <body>
@@ -266,6 +302,49 @@
 </div>
 
 
+
+
+<!-- CARDIO LOG MODAL -->
+<div class="modal-overlay hidden" id="cardioModal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title">LOG CARDIO</div>
+
+    <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">ACTIVITY TYPE</div>
+    <div class="cardio-type-grid" id="cardioTypeGrid">
+      ${['🚴 Bicycle','⚙️ Elliptical','🏃 Outside / Track','🪜 Stairs','🏊 Swimming'].map((t,i)=>{
+        const vals=['bicycle','elliptical','track','stairs','swimming'];
+        return `<div class="cardio-type-btn" onclick="selectCardioType('${vals[i]}',this)">
+          <div class="cardio-type-icon">${t.split(' ')[0]}</div>
+          <div class="cardio-type-label">${t.split(' ').slice(1).join(' ')}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <input type="hidden" id="cardioType" value="">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div class="field" style="margin:0">
+        <label>DURATION (minutes)</label>
+        <input type="number" id="cardioDuration" placeholder="e.g. 30" min="1">
+      </div>
+      <div class="field" style="margin:0">
+        <label>DISTANCE (miles) <span style="color:var(--text3)">optional</span></label>
+        <input type="number" id="cardioDistance" placeholder="e.g. 2.5" step="0.1" min="0">
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>RESISTANCE / LEVEL <span style="color:var(--text3)">optional</span></label>
+      <input type="number" id="cardioResistance" placeholder="e.g. 8" min="0">
+    </div>
+    <div class="field" style="margin-bottom:16px">
+      <label>DATE</label>
+      <input type="date" id="cardioDate">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="saveCardio()">LOG CARDIO ✓</button>
+      <button class="btn btn-ghost" onclick="closeModal('cardioModal')">CANCEL</button>
+    </div>
+  </div>
+</div>
 
 <!-- DATA EXPORT/IMPORT MODAL -->
 <div class="modal-overlay hidden" id="dataModal">
@@ -452,37 +531,150 @@ const MUSCLE_LABELS = {
 // ============================================================
 // ADAPTIVE ENGINE
 // ============================================================
+
+// Energy demand score — higher = more CNS/systemic demand = goes earlier in session.
+// Based on compound involvement, load potential, bilateral barbell status.
+const ENERGY_SCORE = {
+  // Score 5 — Heavy bilateral barbell compounds
+  squat:5, front_squat:5, deadlift:5, flat_bench:5, ohp:5, bent_row:5, tbar_row:5,
+  good_morning:5, nordic:5,
+  // Score 4 — Multi-joint or heavy loaded
+  hack_squat:4, leg_press:4, rdl:4, db_rdl:4, incline_bench:4, decline_bench:4,
+  db_incline:4, db_flat:4, pullup:4, hip_thrust:4, db_sumo:4,
+  dips_chest:4, dips_tri:4, close_grip_bench:4, arnold_press:4, db_ohp:4,
+  chest_supported:4, db_row:4, skull_crusher:4, lunges:4, goblet_squat:4,
+  // Score 3 — Machine compounds / cable multi-joint
+  lat_pulldown:3, cable_row:3, machine_shoulder:3, machine_hip_thrust:3,
+  leg_extension:3, seated_leg_curl:3, leg_curl:3, hammer_chest:3,
+  overhead_ext:3, hip_abduction:3, cable_kickback:3, glute_bridge:3,
+  // Score 2 — Isolations
+  lateral_raise:2, front_raise:2, face_pull:2, ez_curl:2, db_curl_alt:2,
+  cable_curl:2, hammer_curl:2, machine_curl:2, preacher_curl:2, incline_db_curl:2,
+  cable_curl_ez:2, cable_pushdown:2, db_kickback:2, standing_calf:2, seated_calf:2,
+  db_calf:2, leg_press_calf:2, db_shrug:2, bb_shrug:2, cable_shrug:2, machine_shrug:2,
+  pec_deck:2, cable_fly:2, pushup:2,
+  // Score 1 — Corrective / lowest demand
+  cable_wrist_curl:1, bb_wrist_curl:1, reverse_wrist_curl:1, wrist_roller:1,
+  plank:1, cable_crunch:1, hanging_leg_raise:1, ab_wheel:1, decline_situp:1,
+};
+
+function getEnergyScore(ex){
+  // Check static map first
+  if(ENERGY_SCORE[ex.id]!==undefined) return ENERGY_SCORE[ex.id];
+  // Fall back to equipment heuristic
+  if(ex.equipment==='barbell') return 4;
+  if(ex.equipment==='dumbbell') return 3;
+  if(ex.equipment==='cable'||ex.equipment==='machine') return 2;
+  return 1;
+}
+
+// Sort a session's exercise list by energy demand (highest first).
+// User-customized order (manual swaps/adds) overrides this — only apply at init.
+function sortByEnergyDemand(exercises){
+  return [...exercises].sort((a,b)=>{
+    const sa=getEnergyScore(a), sb=getEnergyScore(b);
+    if(sb!==sa) return sb-sa; // higher score first
+    // Tie-break: heavier historical weight goes first
+    const ha=DB.exerciseHistory[a.id], hb=DB.exerciseHistory[b.id];
+    const wa=ha?.length?ha[ha.length-1].weight:0;
+    const wb=hb?.length?hb[hb.length-1].weight:0;
+    return wb-wa;
+  });
+}
+
 function computeRec(exId, muscle, weekNum) {
-  const hist = (DB.exerciseHistory[exId]||[]).slice(-5);
+  const hist = (DB.exerciseHistory[exId]||[]);
   const base = { sets:weekSets(weekNum), reps:weekTargetReps(weekNum), note:'' };
   if (!hist.length) return base;
+
+  // ── Reactive: last session ────────────────────────────────────────────────
   const last = hist[hist.length-1];
   let sa=0, ra=0, note='';
 
-  // Soreness
   if (last.soreness==='Still sore') sa -= 1;
-
-  // Joint pain
-  if (last.joint==='High') { sa-=1; note='Reduce weight 10-15%'; }
-  else if (last.joint==='Mid') note='Reduce weight 5-10%';
-
-  // Load
+  if (last.joint==='High') { sa-=1; note='Reduce weight 10–15%'; }
+  else if (last.joint==='Mid') note='Reduce weight 5–10%';
   if (last.load==="Pushed my limits") { note = note||'Hold or add 2.5–5lbs'; }
   else if (last.load==="Just right") { note = note||'Progress 2–5lbs'; }
   else if (last.load==="Wasn't enough") { ra+=2; note = note||'Add 5–10lbs'; }
   else if (last.load==="Too much") { ra-=2; note = note||'Reduce weight 5–10%'; }
-
-  // Pump
   if (last.pump==='Low') sa+=1;
 
-  // Deload cap
-  if (weekNum===4) { sa=Math.min(sa,0); base.sets=2; }
+  // ── Longitudinal: pattern detection across all history ───────────────────
+  if (hist.length >= 3) {
+    const recent = hist.slice(-6); // last 6 sessions for pattern detection
+
+    // Count feedback frequencies
+    const pumps    = recent.map(h=>h.pump).filter(Boolean);
+    const loads    = recent.map(h=>h.load).filter(Boolean);
+    const soreness = recent.map(h=>h.soreness).filter(Boolean);
+    const joints   = recent.map(h=>h.joint).filter(Boolean);
+
+    const lowPumpCount    = pumps.filter(p=>p==='Low').length;
+    const notEnoughCount  = loads.filter(l=>l==="Wasn't enough").length;
+    const tooMuchCount    = loads.filter(l=>l==="Too much").length;
+    const stillSoreCount  = soreness.filter(s=>s==='Still sore').length;
+    const painCount       = joints.filter(j=>j==='Mid'||j==='High').length;
+
+    // Consistently low pump (3+ of last 6) → this muscle needs more sets
+    if (lowPumpCount >= 3) {
+      sa += 1;
+      note = note || 'Historically low pump — adding a set';
+    }
+
+    // Consistently not enough load (3+ of last 6) → weight too light pattern
+    if (notEnoughCount >= 3) {
+      ra += 1;
+      note = note || 'Weight consistently too light — push harder';
+    }
+
+    // Consistently too much (3+ of last 6) → reduce baseline
+    if (tooMuchCount >= 3) {
+      sa -= 1;
+      ra -= 1;
+      note = note || 'Weight consistently too heavy — dial back';
+    }
+
+    // Consistently sore (3+ of last 6) → this body recovers slowly here
+    if (stillSoreCount >= 3) {
+      sa -= 1;
+      note = note || 'Slow recovery pattern — reducing volume';
+    }
+
+    // Repeated pain (2+ of last 6) → flag it
+    if (painCount >= 2) {
+      sa -= 1;
+      note = note || '⚠ Recurring pain detected — be cautious';
+    }
+
+    // Progressive overload check: has weight stalled for 3+ sessions?
+    if (hist.length >= 4) {
+      const weights = hist.slice(-4).map(h=>h.weight).filter(w=>w>0);
+      if (weights.length >= 3) {
+        const maxW = Math.max(...weights);
+        const minW = Math.min(...weights);
+        const stallThreshold = maxW * 0.03; // less than 3% variance = stalled
+        if (maxW > 0 && (maxW - minW) <= stallThreshold && last.load !== "Too much") {
+          note = note || 'Weight stalled — consider deload or technique check';
+        }
+      }
+    }
+  }
+
+  // Deload week always reduces
+  if (weekNum===4) { sa=Math.min(sa,0); base.sets=2; ra=Math.min(ra,0); }
 
   const tr = weekTargetReps(weekNum);
   return {
-    sets: Math.max(1,Math.min(5, base.sets+sa)), // Rule 1: ≤5 sets/exercise
+    sets: Math.max(1, Math.min(5, base.sets+sa)),
     reps: `${Math.max(4,tr[0]+ra)}–${Math.max(6,tr[1]+ra)}`,
-    note
+    note,
+    // Expose pattern flags for display
+    flags: {
+      slowRecovery: (DB.exerciseHistory[exId]||[]).slice(-6).filter(h=>h.soreness==='Still sore').length >= 3,
+      painWarning:  (DB.exerciseHistory[exId]||[]).slice(-6).filter(h=>h.joint==='Mid'||h.joint==='High').length >= 2,
+      stalled:      note.includes('stalled'),
+    }
   };
 }
 
@@ -561,7 +753,10 @@ function renderDashboard(){
   h+=`<div class="card">`;
   h+=`<div class="flex-between" style="margin-bottom:14px">
     <div class="card-title" style="margin:0">TODAY — ${today}</div>
-    <button class="btn btn-sm btn-ghost" onclick="openBonusModal('${today}')">+ ADD WORKOUT</button>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-sm btn-ghost" onclick="openCardioModal('${today}')">🏃 CARDIO</button>
+      <button class="btn btn-sm btn-ghost" onclick="openBonusModal('${today}')">+ ADD WORKOUT</button>
+    </div>
   </div>`;
 
   const todayIsProgramWorkout=log&&!log.bonus&&log.wkKey;
@@ -733,10 +928,11 @@ function renderWorkout(){
         <button class="btn btn-secondary" onclick="openBonusModal('${today}')">+ ADD BONUS WORKOUT</button>
       </div>`;
     }
-    // Init session from program workout
+    // Init session from program workout — sort by energy demand (heaviest compounds first)
+    const sortedExercises=sortByEnergyDemand(JSON.parse(JSON.stringify(curW.plan.exercises)));
     DB.sessions[today]={date:today,programId:prog.id,wkKey:curW.key,workoutNum:curW.num,
       week:curW.wk,day:curW.dy,
-      exercises:JSON.parse(JSON.stringify(curW.plan.exercises)),
+      exercises:sortedExercises,
       sets:{},feedback:{},completed:false,hasPain:false,skipped:false,bonus:false};
     saveDB();
     log=DB.sessions[today];
@@ -758,7 +954,7 @@ function renderWorkout(){
       <button class="btn btn-secondary" onclick="openBonusModal('${today}')">+ ADD BONUS WORKOUT</button></div>`;
     DB.sessions[today]={date:today,programId:prog.id,wkKey:curW2.key,workoutNum:curW2.num,
       week:curW2.wk,day:curW2.dy,skippedPreviously:skipReason,
-      exercises:JSON.parse(JSON.stringify(curW2.plan.exercises)),
+      exercises:sortByEnergyDemand(JSON.parse(JSON.stringify(curW2.plan.exercises))),
       sets:{},feedback:{},completed:false,hasPain:false,skipped:false,bonus:false};
     saveDB();
     log=DB.sessions[today];
@@ -807,6 +1003,9 @@ function renderWorkout(){
         <div class="exercise-body">
           <div class="last-perf">${histLabel}</div>
           <div class="rec-badge" style="margin-top:6px">▸ ${rec.sets} sets × ${rec.reps}${rec.note?' · '+rec.note:''}</div>
+          ${rec.flags&&rec.flags.painWarning?`<div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--red);margin-top:3px">⚠ Recurring pain — consider swapping this exercise</div>`:''}
+          ${rec.flags&&rec.flags.slowRecovery?`<div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--accent2);margin-top:3px">↓ Slow recovery pattern — volume reduced</div>`:''}
+          ${rec.flags&&rec.flags.stalled?`<div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--blue);margin-top:3px">↔ Weight stalled — consider a deload or form check</div>`:''}
           <div style="display:grid;grid-template-columns:36px 1fr 1fr auto auto;gap:8px;margin:8px 0 4px">
             <div class="set-num">#</div>
             <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">WEIGHT</div>
@@ -858,8 +1057,25 @@ function renderWorkout(){
     </div></div>`;
   });
 
-  h+=`<div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap">
+  // Cardio section — shows any cardio already logged today
+  const todayCardio=(DB.cardioHistory||[]).filter(c=>c.date===today);
+  if(todayCardio.length){
+    const CICONS={bicycle:'🚴',elliptical:'⚙️',track:'🏃',stairs:'🪜',swimming:'🏊'};
+    h+=`<div style="margin-top:16px;border:1px solid rgba(68,136,255,.2);border-radius:var(--radius);padding:14px;background:rgba(68,136,255,.03)">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#4488ff;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">// CARDIO TODAY</div>
+      ${todayCardio.map((c,ci)=>`<div class="cardio-log-row">
+        <div class="cardio-log-icon">${CICONS[c.type]||'🏃'}</div>
+        <div class="cardio-log-body">
+          <div class="cardio-log-title">${c.type.charAt(0).toUpperCase()+c.type.slice(1)}</div>
+          <div class="cardio-log-meta">${c.duration} min${c.distance?' · '+c.distance+' mi':''}${c.resistance?' · Level '+c.resistance:''}</div>
+        </div>
+        <button class="btn btn-sm btn-danger" onclick="deleteCardio(${(DB.cardioHistory||[]).indexOf(c)})">×</button>
+      </div>`).join('')}
+    </div>`;
+  }
+  h+=`<div style="margin-top:20px;display:flex;gap:12px;flex-wrap:wrap">
     <button class="btn btn-primary" onclick="completeWorkout('${today}')">COMPLETE WORKOUT ✓</button>
+    <button class="btn btn-sm btn-secondary" onclick="openCardioModal('${today}')">🏃 + CARDIO</button>
     <button class="btn btn-ghost" onclick="openSkipModal('${today}')">LOG AS SKIPPED</button>
   </div>`;
   return h;
@@ -980,7 +1196,54 @@ function renderProgress(){
   });
   h+=`</div>`;
 
+  // Cardio history section
+  const cardioAll=DB.cardioHistory||[];
+  if(cardioAll.length){
+    const CICONS={bicycle:'🚴',elliptical:'⚙️',track:'🏃',stairs:'🪜',swimming:'🏊'};
+    const CNAMES={bicycle:'Bicycle',elliptical:'Elliptical',track:'Outside / Track',stairs:'Stairs',swimming:'Swimming'};
+    h+=`<div class="card"><div class="flex-between" style="margin-bottom:14px">
+      <div class="card-title" style="margin:0">CARDIO LOG</div>
+      <button class="btn btn-sm btn-secondary" onclick="openCardioModal('${todayStr()}')">+ LOG CARDIO</button>
+    </div>`;
+    // Summary by type
+    const byType={};
+    cardioAll.forEach(c=>{
+      if(!byType[c.type]) byType[c.type]={count:0,totalMin:0,totalMiles:0};
+      byType[c.type].count++;
+      byType[c.type].totalMin+=c.duration||0;
+      byType[c.type].totalMiles+=c.distance||0;
+    });
+    h+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      ${Object.entries(byType).map(([type,stats])=>`
+        <div style="padding:10px 14px;border:1px solid rgba(68,136,255,.2);border-radius:var(--radius2);background:rgba(68,136,255,.04)">
+          <div style="font-size:18px;margin-bottom:3px">${CICONS[type]||'🏃'}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:#4488ff;text-transform:uppercase">${CNAMES[type]||type}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);margin-top:3px">${stats.count} sessions · ${stats.totalMin} min${stats.totalMiles>0?' · '+stats.totalMiles.toFixed(1)+' mi':''}</div>
+        </div>`).join('')}
+    </div>`;
+    // Recent entries
+    h+=`<div style="max-height:240px;overflow-y:auto">`;
+    cardioAll.slice().reverse().slice(0,20).forEach((c,ri)=>{
+      const realIdx=cardioAll.length-1-(cardioAll.slice().reverse().slice(0,20).indexOf(c,ri));
+      h+=`<div class="cardio-log-row">
+        <div class="cardio-log-icon">${CICONS[c.type]||'🏃'}</div>
+        <div class="cardio-log-body">
+          <div class="cardio-log-title">${CNAMES[c.type]||c.type}</div>
+          <div class="cardio-log-meta">${c.date} · ${c.duration} min${c.distance?' · '+c.distance+' mi':''}${c.resistance?' · Level '+c.resistance:''}</div>
+        </div>
+      </div>`;
+    });
+    h+=`</div></div>`;
+  } else {
+    h+=`<div class="card" style="text-align:center;padding:24px">
+      <div style="font-size:24px;margin-bottom:8px">🏃</div>
+      <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)">No cardio logged yet</div>
+      <div style="margin-top:12px"><button class="btn btn-secondary btn-sm" onclick="openCardioModal('${todayStr()}')">+ LOG FIRST CARDIO SESSION</button></div>
+    </div>`;
+  }
+
   const all=Object.values(DB.sessions);
+  const achData=computeAchievements();
   h+=`<div class="card"><div class="card-title">LIFETIME STATS</div>
     <div style="display:flex;gap:20px;flex-wrap:wrap">
       <div><div class="meta-label">Workouts</div><div class="meta-value">${all.filter(s=>s.completed).length}</div></div>
@@ -988,6 +1251,15 @@ function renderProgress(){
       <div><div class="meta-label">Sick</div><div class="meta-value" style="color:#aa77ff">${all.filter(s=>s.skipReason==='sick').length}</div></div>
       <div><div class="meta-label">Injured</div><div class="meta-value" style="color:var(--red)">${all.filter(s=>s.skipReason==='injury').length}</div></div>
       <div><div class="meta-label">Missed</div><div class="meta-value" style="color:var(--text2)">${all.filter(s=>s.skipReason==='couldnt').length}</div></div>
+    </div>
+    <div class="achievement-collapsible">
+      <div class="achievement-toggle" onclick="toggleAchievements(this)">
+        <span class="achievement-toggle-label">🏆 FUN FACTS & ACHIEVEMENTS <span style="color:var(--accent)">${achData.earned.length}</span> / ${achData.total} UNLOCKED</span>
+        <span class="achievement-toggle-chev">▼</span>
+      </div>
+      <div class="achievement-body" id="achievementBody">
+        ${renderAchievementBody(achData)}
+      </div>
     </div>
   </div>`;
   return h;
@@ -1818,7 +2090,7 @@ function confirmBonusWorkout(){
   DB.sessions[dateKey]={
     date:dateKey, bonus:true,
     programId:prog?.id||null, week:wk, day:null, wkKey:null, workoutNum:null,
-    exercises:cappedExercises, sets:{}, feedback:{},
+    exercises:sortByEnergyDemand(cappedExercises), sets:{}, feedback:{},
     completed:false, hasPain:false, skipped:false
   };
   saveDB();
@@ -2692,6 +2964,655 @@ function loadTexasMethod(){
     schedule,startDate:todayStr(),active:true,totalWeeks:12});
   DB.activeProgram=id;
   saveDB();toast('Texas Method loaded!');switchView('dashboard');
+}
+
+// ============================================================
+// CARDIO
+// ============================================================
+const CARDIO_TYPES=[
+  {id:'bicycle',label:'Bicycle',icon:'🚴'},
+  {id:'elliptical',label:'Elliptical',icon:'⚙️'},
+  {id:'track',label:'Outside / Track',icon:'🏃'},
+  {id:'stairs',label:'Stairs',icon:'🪜'},
+  {id:'swimming',label:'Swimming',icon:'🏊'},
+];
+
+function openCardioModal(dateKey){
+  // Reset form
+  document.getElementById('cardioType').value='';
+  document.getElementById('cardioDuration').value='';
+  document.getElementById('cardioDistance').value='';
+  document.getElementById('cardioResistance').value='';
+  document.getElementById('cardioDate').value=dateKey||todayStr();
+  // Build type grid
+  document.getElementById('cardioTypeGrid').innerHTML=CARDIO_TYPES.map(t=>`
+    <div class="cardio-type-btn" onclick="selectCardioType('${t.id}',this)">
+      <div class="cardio-type-icon">${t.icon}</div>
+      <div class="cardio-type-label">${t.label}</div>
+    </div>`).join('');
+  document.getElementById('cardioModal').classList.remove('hidden');
+}
+
+function selectCardioType(type, el){
+  document.getElementById('cardioType').value=type;
+  document.querySelectorAll('.cardio-type-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function saveCardio(){
+  const type=document.getElementById('cardioType').value;
+  const duration=parseInt(document.getElementById('cardioDuration').value)||0;
+  const distance=parseFloat(document.getElementById('cardioDistance').value)||0;
+  const resistance=parseInt(document.getElementById('cardioResistance').value)||0;
+  const date=document.getElementById('cardioDate').value||todayStr();
+
+  if(!type){ toast('Select an activity type'); return; }
+  if(!duration){ toast('Enter duration'); return; }
+
+  if(!DB.cardioHistory) DB.cardioHistory=[];
+  DB.cardioHistory.push({
+    id:'cardio_'+Date.now(),
+    date, type, duration,
+    distance:distance||null,
+    resistance:resistance||null,
+  });
+  saveDB();
+  closeModal('cardioModal');
+  toast('Cardio logged!');
+  render();
+}
+
+function deleteCardio(idx){
+  if(!confirm('Delete this cardio entry?')) return;
+  DB.cardioHistory.splice(idx,1);
+  saveDB();
+  render();
+}
+
+// ============================================================
+// ACHIEVEMENTS & FUN FACTS
+// ============================================================
+
+// ── Reference constants ───────────────────────────────────────────────────────
+const ACH = {
+  // Distance (miles)
+  EARTH_CIRC:       24901,
+  MOON_DIST:        238855,
+  MORDOR:           1779,       // Hobbiton to Mount Doom (The Shire → Mordor, ~1779 miles)
+  GREAT_WALL:       13171,
+  ENGLISH_CHANNEL:  21,
+  EVEREST_MI:       3.45,       // vertical miles
+  ROUTE_66:         2278,
+
+  // Weight (lbs) — lifting volume references
+  GORILLA:          440,
+  RHINO:            3300,
+  POLAR_BEAR:       990,
+  SCHOOL_BUS:       28000,
+  BLUE_WHALE:       300000,
+  STATUE_LIBERTY:   450000,
+  BOEING_747:       900000,
+  SUMO_WRESTLER:    600,        // world's heaviest ~600lbs
+  SWORD_LBS:        3,          // medieval longsword ~3lbs
+  OSCAR_STATUE:     8.5,        // one Oscar ~8.5lbs, ~3000 ever awarded = ~25500lbs total
+  NFL_LINEBACKER:   240,
+  GOLDEN_RETRIEVER: 70,
+  HP_BOOK_LBS:      2.5,        // avg HP book ~2.5lbs, ~500m copies = ~1.25B lbs
+  SMART_CAR:        1850,
+  LIBERTY_BELL:     2080,
+
+  // Famous volcano weights (lbs) for squat milestones
+  VESUVIUS_LBS:     1.3e15,     // Mount Vesuvius ~580 billion metric tons
+  KILIMANJARO_LBS:  5.5e17,
+
+  // Armor & weapons (lbs)
+  CHAINMAIL:        30,         // full chainmail suit
+  PLATE_ARMOR:      55,         // full plate suit
+  LONGSWORD:        3,
+  CLAYMORE:         5.5,
+  HALBERD:          6,
+  CROSSBOW:         14,
+  WARHAMMER:        8,
+  KITE_SHIELD:      12,
+  FULL_KNIGHT:      67,         // knight + armor ~67lbs
+};
+
+function getLiftingVolume(){
+  // Total lbs moved across all logged sets
+  let total=0;
+  Object.values(DB.sessions).forEach(s=>{
+    if(!s.completed) return;
+    Object.values(s.sets||{}).forEach(setArr=>{
+      (setArr||[]).filter(s=>s.done&&s.weight&&s.reps).forEach(set=>{
+        total+=(parseFloat(set.weight)||0)*(parseInt(set.reps)||0);
+      });
+    });
+  });
+  return total;
+}
+
+function getTotalCardioMiles(){
+  return (DB.cardioHistory||[]).reduce((sum,c)=>sum+(c.distance||0),0);
+}
+
+function getTotalCardioMinutes(){
+  return (DB.cardioHistory||[]).reduce((sum,c)=>sum+(c.duration||0),0);
+}
+
+function getCompletedDates(){
+  return Object.values(DB.sessions)
+    .filter(s=>s.completed)
+    .map(s=>s.date)
+    .sort();
+}
+
+// Consistency achievements — forgives injury/sick days
+// Looks for periods where user worked out at target frequency,
+// ignoring gap weeks that contain injury/sick skips
+function checkConsistencyAchievement(targetPerWeek, weeksRequired){
+  const sessions=Object.values(DB.sessions);
+  const completedDates=new Set(sessions.filter(s=>s.completed).map(s=>s.date));
+  const excusedDates=new Set(sessions.filter(s=>s.skipReason==='injury'||s.skipReason==='sick').map(s=>s.date));
+
+  if(completedDates.size===0) return null;
+
+  const sorted=[...completedDates].sort();
+  const firstDate=new Date(sorted[0]);
+  const lastDate=new Date(sorted[sorted.length-1]);
+
+  // Walk week by week from first workout date
+  let qualifyingWeeks=0;
+  let bestStreak=0;
+  let streakStart=null;
+  let earnedDate=null;
+
+  let weekStart=new Date(firstDate);
+  weekStart.setDate(weekStart.getDate()-weekStart.getDay()); // align to Sunday
+
+  const today=new Date();
+  while(weekStart<=today){
+    const weekEnd=new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate()+6);
+
+    // Count completed workouts this week
+    let weekCompleted=0;
+    let weekExcused=false;
+    for(let d=new Date(weekStart);d<=weekEnd;d.setDate(d.getDate()+1)){
+      const k=d.toISOString().slice(0,10);
+      if(completedDates.has(k)) weekCompleted++;
+      if(excusedDates.has(k)) weekExcused=true;
+    }
+
+    // Week qualifies if they hit target, OR if there were excused absences
+    const weekQualifies=weekCompleted>=targetPerWeek||weekExcused;
+
+    if(weekQualifies){
+      qualifyingWeeks++;
+      if(!streakStart) streakStart=weekStart.toISOString().slice(0,10);
+      if(qualifyingWeeks>=weeksRequired&&!earnedDate){
+        // Calculate the actual date this was earned (end of qualifying week)
+        earnedDate=weekEnd.toISOString().slice(0,10);
+      }
+    } else {
+      qualifyingWeeks=0;
+      streakStart=null;
+    }
+
+    weekStart.setDate(weekStart.getDate()+7);
+  }
+
+  return earnedDate;
+}
+
+function computeAchievements(){
+  const vol=getLiftingVolume();         // total lbs moved
+  const miles=getTotalCardioMiles();    // total cardio miles
+  const mins=getTotalCardioMinutes();
+  const completed=getCompletedDates();
+  const totalWorkouts=completed.length;
+  const sessions=Object.values(DB.sessions);
+  const sickDays=sessions.filter(s=>s.skipReason==='sick').length;
+  const injuryDays=sessions.filter(s=>s.skipReason==='injury').length;
+
+  // Helper: find approximate date when cumulative volume crossed a threshold
+  function dateWhenVolCrossed(threshold){
+    let running=0;
+    const sorted=Object.values(DB.sessions)
+      .filter(s=>s.completed)
+      .sort((a,b)=>a.date.localeCompare(b.date));
+    for(const s of sorted){
+      Object.values(s.sets||{}).forEach(setArr=>{
+        (setArr||[]).filter(x=>x.done&&x.weight&&x.reps).forEach(set=>{
+          running+=(parseFloat(set.weight)||0)*(parseInt(set.reps)||0);
+        });
+      });
+      if(running>=threshold) return s.date;
+    }
+    return null;
+  }
+
+  function dateWhenMilesCrossed(threshold){
+    let running=0;
+    for(const c of (DB.cardioHistory||[]).sort((a,b)=>a.date.localeCompare(b.date))){
+      running+=c.distance||0;
+      if(running>=threshold) return c.date;
+    }
+    return null;
+  }
+
+  function dateWhenWorkoutsCrossed(n){
+    return completed[n-1]||null;
+  }
+
+  const ACHIEVEMENTS = [
+    // ── ARMORY ───────────────────────────────────────────────────────────────
+    {
+      category:'⚔️ THE ARMORY',
+      id:'chainmail',
+      icon:'🔗',
+      title:'Chainmailed',
+      desc:`You've lifted enough to forge a full chainmail suit (${ACH.CHAINMAIL}lbs). A knight is born.`,
+      stat: ()=>`Total volume: ${vol.toLocaleString()}lbs / Need: ${ACH.CHAINMAIL.toLocaleString()}lbs`,
+      earned: ()=>vol>=ACH.CHAINMAIL,
+      date: ()=>dateWhenVolCrossed(ACH.CHAINMAIL),
+    },
+    {
+      category:'⚔️ THE ARMORY',
+      id:'longsword',
+      icon:'🗡️',
+      title:'The Swordsmith',
+      desc:`Lifted enough iron to forge ${Math.floor(vol/ACH.LONGSWORD).toLocaleString()} longswords. You are the armory.`,
+      stat: ()=>`${Math.floor(vol/ACH.LONGSWORD).toLocaleString()} swords forged`,
+      earned: ()=>vol>=ACH.LONGSWORD*100,
+      date: ()=>dateWhenVolCrossed(ACH.LONGSWORD*100),
+    },
+    {
+      category:'⚔️ THE ARMORY',
+      id:'claymore',
+      icon:'⚔️',
+      title:'Claymore Forged',
+      desc:`Volume enough to forge ${Math.floor(vol/ACH.CLAYMORE).toLocaleString()} claymores. Scotland would be proud.`,
+      stat: ()=>`${Math.floor(vol/ACH.CLAYMORE).toLocaleString()} claymores`,
+      earned: ()=>vol>=ACH.CLAYMORE*500,
+      date: ()=>dateWhenVolCrossed(ACH.CLAYMORE*500),
+    },
+    {
+      category:'⚔️ THE ARMORY',
+      id:'plate_armor',
+      icon:'🛡️',
+      title:'Fully Plated',
+      desc:`Lifted enough to outfit a full plate armor suit (${ACH.PLATE_ARMOR}lbs). You clank when you walk.`,
+      stat: ()=>`Vol: ${vol.toLocaleString()}lbs`,
+      earned: ()=>vol>=ACH.PLATE_ARMOR*1000,
+      date: ()=>dateWhenVolCrossed(ACH.PLATE_ARMOR*1000),
+    },
+    {
+      category:'⚔️ THE ARMORY',
+      id:'warhammer',
+      icon:'🔨',
+      title:'Warhammer Wielder',
+      desc:`Forged ${Math.floor(vol/ACH.WARHAMMER).toLocaleString()} warhammers from your total volume. Thor would nod.`,
+      stat: ()=>`${Math.floor(vol/ACH.WARHAMMER).toLocaleString()} warhammers`,
+      earned: ()=>vol>=ACH.WARHAMMER*1000,
+      date: ()=>dateWhenVolCrossed(ACH.WARHAMMER*1000),
+    },
+    {
+      category:'⚔️ THE ARMORY',
+      id:'full_knight',
+      icon:'🏰',
+      title:'Knight Commander',
+      desc:`Lifted enough to outfit ${Math.floor(vol/ACH.FULL_KNIGHT).toLocaleString()} fully armored knights. The kingdom is ready.`,
+      stat: ()=>`${Math.floor(vol/ACH.FULL_KNIGHT).toLocaleString()} knights outfitted`,
+      earned: ()=>vol>=ACH.FULL_KNIGHT*1000,
+      date: ()=>dateWhenVolCrossed(ACH.FULL_KNIGHT*1000),
+    },
+    // ── LIFTING FEATS ────────────────────────────────────────────────────────
+    {
+      category:'💪 LIFTING FEATS',
+      id:'gorilla',
+      icon:'🦍',
+      title:'Gorilla Mode',
+      desc:`You've lifted the equivalent of a silverback gorilla (${ACH.GORILLA}lbs). In one session that gorilla could bench a rhino.`,
+      stat: ()=>`Vol: ${vol.toLocaleString()}lbs`,
+      earned: ()=>vol>=ACH.GORILLA*100,
+      date: ()=>dateWhenVolCrossed(ACH.GORILLA*100),
+    },
+    {
+      category:'💪 LIFTING FEATS',
+      id:'polar_bear',
+      icon:'🐻‍❄️',
+      title:'Polar Beared',
+      desc:`Lifted the weight of ${Math.floor(vol/ACH.POLAR_BEAR).toLocaleString()} adult polar bears. They are not amused.`,
+      stat: ()=>`${Math.floor(vol/ACH.POLAR_BEAR).toLocaleString()} polar bears`,
+      earned: ()=>vol>=ACH.POLAR_BEAR*100,
+      date: ()=>dateWhenVolCrossed(ACH.POLAR_BEAR*100),
+    },
+    {
+      category:'💪 LIFTING FEATS',
+      id:'school_bus',
+      icon:'🚌',
+      title:"School's Out",
+      desc:`Lifetime volume equals a loaded school bus (${ACH.SCHOOL_BUS.toLocaleString()}lbs). The kids are on board whether they like it or not.`,
+      stat: ()=>`Vol: ${vol.toLocaleString()}lbs`,
+      earned: ()=>vol>=ACH.SCHOOL_BUS,
+      date: ()=>dateWhenVolCrossed(ACH.SCHOOL_BUS),
+    },
+    {
+      category:'💪 LIFTING FEATS',
+      id:'blue_whale',
+      icon:'🐋',
+      title:'Blue Whale',
+      desc:`Total volume has matched a blue whale (${(ACH.BLUE_WHALE/1000).toLocaleString()}k lbs). The ocean respects you.`,
+      stat: ()=>`Vol: ${vol.toLocaleString()}lbs`,
+      earned: ()=>vol>=ACH.BLUE_WHALE,
+      date: ()=>dateWhenVolCrossed(ACH.BLUE_WHALE),
+    },
+    {
+      category:'💪 LIFTING FEATS',
+      id:'statue_liberty',
+      icon:'🗽',
+      title:'Liberty Moved',
+      desc:`You have moved the equivalent weight of the Statue of Liberty (${(ACH.STATUE_LIBERTY/1000).toLocaleString()}k lbs). She didn't move easily.`,
+      stat: ()=>`Vol: ${vol.toLocaleString()}lbs`,
+      earned: ()=>vol>=ACH.STATUE_LIBERTY,
+      date: ()=>dateWhenVolCrossed(ACH.STATUE_LIBERTY),
+    },
+    {
+      category:'💪 LIFTING FEATS',
+      id:'boeing_747',
+      icon:'✈️',
+      title:'Ground Control',
+      desc:`Lifted the equivalent of a loaded Boeing 747 (${(ACH.BOEING_747/1000).toLocaleString()}k lbs). It's still on the ground because of you.`,
+      stat: ()=>`Vol: ${vol.toLocaleString()}lbs`,
+      earned: ()=>vol>=ACH.BOEING_747,
+      date: ()=>dateWhenVolCrossed(ACH.BOEING_747),
+    },
+    {
+      category:'💪 LIFTING FEATS',
+      id:'smart_car',
+      icon:'🚗',
+      title:'Smart Car Squatter',
+      desc:`You've squatted the weight of a Smart Car (${ACH.SMART_CAR.toLocaleString()}lbs) in total volume. It didn't fight back.`,
+      stat: ()=>`Vol: ${vol.toLocaleString()}lbs`,
+      earned: ()=>vol>=ACH.SMART_CAR,
+      date: ()=>dateWhenVolCrossed(ACH.SMART_CAR),
+    },
+    {
+      category:'💪 LIFTING FEATS',
+      id:'sumo',
+      icon:'🏋️',
+      title:'Double Sumo',
+      desc:`Moved the weight of the world's heaviest sumo wrestler, stacked on another sumo wrestler (${(ACH.SUMO_WRESTLER*2).toLocaleString()}lbs). Technically that's a sumo tower.`,
+      stat: ()=>`Vol: ${vol.toLocaleString()}lbs`,
+      earned: ()=>vol>=ACH.SUMO_WRESTLER*2*500,
+      date: ()=>dateWhenVolCrossed(ACH.SUMO_WRESTLER*2*500),
+    },
+    {
+      category:'💪 LIFTING FEATS',
+      id:'golden_retrievers',
+      icon:'🐕',
+      title:'Retriever Wrangler',
+      desc:`You've curled the equivalent of ${Math.floor(vol/ACH.GOLDEN_RETRIEVER).toLocaleString()} golden retrievers. They are all very good boys.`,
+      stat: ()=>`${Math.floor(vol/ACH.GOLDEN_RETRIEVER).toLocaleString()} good boys`,
+      earned: ()=>vol>=ACH.GOLDEN_RETRIEVER*500,
+      date: ()=>dateWhenVolCrossed(ACH.GOLDEN_RETRIEVER*500),
+    },
+    {
+      category:'💪 LIFTING FEATS',
+      id:'linebacker',
+      icon:'🏈',
+      title:'Linebacker Territory',
+      desc:`Lifted more in a session than the average NFL linebacker weighs (${ACH.NFL_LINEBACKER}lbs). They noticed.`,
+      stat: ()=>`Achieved once total volume exceeded ${(ACH.NFL_LINEBACKER*100).toLocaleString()}lbs`,
+      earned: ()=>vol>=ACH.NFL_LINEBACKER*100,
+      date: ()=>dateWhenVolCrossed(ACH.NFL_LINEBACKER*100),
+    },
+    {
+      category:'💪 LIFTING FEATS',
+      id:'liberty_bell',
+      icon:'🔔',
+      title:'Bell Ringer',
+      desc:`Lifted the equivalent of the Liberty Bell (${ACH.LIBERTY_BELL.toLocaleString()}lbs) in a single week. It still has a crack.`,
+      stat: ()=>`Vol: ${vol.toLocaleString()}lbs`,
+      earned: ()=>vol>=ACH.LIBERTY_BELL,
+      date: ()=>dateWhenVolCrossed(ACH.LIBERTY_BELL),
+    },
+    // ── DISTANCE & EXPLORATION ────────────────────────────────────────────────
+    {
+      category:'🌍 EXPLORER',
+      id:'mordor',
+      icon:'💍',
+      title:'There and Back Again',
+      desc:`You've covered the distance from Hobbiton to Mount Doom and back (${(ACH.MORDOR*2).toLocaleString()} miles). One does not simply walk into Mordor, but you did.`,
+      stat: ()=>`${miles.toFixed(1)} mi / Need: ${(ACH.MORDOR*2).toLocaleString()} mi`,
+      earned: ()=>miles>=ACH.MORDOR*2,
+      date: ()=>dateWhenMilesCrossed(ACH.MORDOR*2),
+    },
+    {
+      category:'🌍 EXPLORER',
+      id:'english_channel',
+      icon:'🏊',
+      title:'Channel Swimmer',
+      desc:`Covered the English Channel distance (${ACH.ENGLISH_CHANNEL} miles) in cardio. You smell like salt water.`,
+      stat: ()=>`${miles.toFixed(1)} mi / Need: ${ACH.ENGLISH_CHANNEL} mi`,
+      earned: ()=>miles>=ACH.ENGLISH_CHANNEL,
+      date: ()=>dateWhenMilesCrossed(ACH.ENGLISH_CHANNEL),
+    },
+    {
+      category:'🌍 EXPLORER',
+      id:'everest',
+      icon:'🏔️',
+      title:'Everest Climber',
+      desc:`Accumulated the vertical equivalent of climbing Everest (${ACH.EVEREST_MI} miles / ${(ACH.EVEREST_MI*5280).toLocaleString()} ft). The view is earned.`,
+      stat: ()=>`${miles.toFixed(1)} mi / Need: ${ACH.EVEREST_MI} mi`,
+      earned: ()=>miles>=ACH.EVEREST_MI,
+      date: ()=>dateWhenMilesCrossed(ACH.EVEREST_MI),
+    },
+    {
+      category:'🌍 EXPLORER',
+      id:'great_wall',
+      icon:'🏯',
+      title:'Great Walker',
+      desc:`You've covered the length of the Great Wall of China (${ACH.GREAT_WALL.toLocaleString()} miles). All ${ACH.GREAT_WALL.toLocaleString()} miles of it.`,
+      stat: ()=>`${miles.toFixed(1)} mi / Need: ${ACH.GREAT_WALL.toLocaleString()} mi`,
+      earned: ()=>miles>=ACH.GREAT_WALL,
+      date: ()=>dateWhenMilesCrossed(ACH.GREAT_WALL),
+    },
+    {
+      category:'🌍 EXPLORER',
+      id:'earth',
+      icon:'🌍',
+      title:'Around the World',
+      desc:`You've run the circumference of the Earth (${ACH.EARTH_CIRC.toLocaleString()} miles). Phileas Fogg did it in 80 days. You did it your way.`,
+      stat: ()=>`${miles.toFixed(1)} mi / Need: ${ACH.EARTH_CIRC.toLocaleString()} mi`,
+      earned: ()=>miles>=ACH.EARTH_CIRC,
+      date: ()=>dateWhenMilesCrossed(ACH.EARTH_CIRC),
+    },
+    {
+      category:'🌍 EXPLORER',
+      id:'route66',
+      icon:'🛣️',
+      title:'Route 66',
+      desc:`Covered the full length of Route 66 (${ACH.ROUTE_66.toLocaleString()} miles). Get your kicks.`,
+      stat: ()=>`${miles.toFixed(1)} mi / Need: ${ACH.ROUTE_66.toLocaleString()} mi`,
+      earned: ()=>miles>=ACH.ROUTE_66,
+      date: ()=>dateWhenMilesCrossed(ACH.ROUTE_66),
+    },
+    {
+      category:'🌍 EXPLORER',
+      id:'moon',
+      icon:'🌕',
+      title:'To the Moon',
+      desc:`You've covered the distance to the Moon (${ACH.MOON_DIST.toLocaleString()} miles). Houston, we have a problem — there is no more cardio.`,
+      stat: ()=>`${miles.toFixed(1)} mi / Need: ${ACH.MOON_DIST.toLocaleString()} mi`,
+      earned: ()=>miles>=ACH.MOON_DIST,
+      date: ()=>dateWhenMilesCrossed(ACH.MOON_DIST),
+    },
+    // ── HEALTH AWARENESS ─────────────────────────────────────────────────────
+    {
+      category:'🩺 HEALTH PATTERNS',
+      id:'comeback_kid',
+      icon:'💊',
+      title:'The Comeback',
+      desc:`You came back to the gym after being sick. That's not weakness. That's will.`,
+      stat: ()=>`${sickDays} sick day${sickDays!==1?"s":""} logged`,
+      earned: ()=>sickDays>=1&&totalWorkouts>=1,
+      date: ()=>{
+        const sickSession=Object.values(DB.sessions).filter(s=>s.skipReason==='sick').sort((a,b)=>a.date.localeCompare(b.date))[0];
+        if(!sickSession) return null;
+        const afterSick=completed.find(d=>d>sickSession.date);
+        return afterSick||null;
+      },
+    },
+    {
+      category:'🩺 HEALTH PATTERNS',
+      id:'injury_return',
+      icon:'🩹',
+      title:'Resilient',
+      desc:`Logged ${injuryDays} injury day${injuryDays!==1?"s":""} and came back anyway. The body heals. The habit stays.`,
+      stat: ()=>`${injuryDays} injury day${injuryDays!==1?"s":""} logged`,
+      earned: ()=>injuryDays>=1&&totalWorkouts>=1,
+      date: ()=>{
+        const injSession=Object.values(DB.sessions).filter(s=>s.skipReason==='injury').sort((a,b)=>a.date.localeCompare(b.date))[0];
+        if(!injSession) return null;
+        const afterInj=completed.find(d=>d>injSession.date);
+        return afterInj||null;
+      },
+    },
+    {
+      category:'🩺 HEALTH PATTERNS',
+      id:'pain_aware',
+      icon:'⚠️',
+      title:'Body Reader',
+      desc:`Flagged joint or muscle pain 5+ times across workouts. You're listening to your body — that's how you train for decades, not just months.`,
+      stat: ()=>`${Object.values(DB.sessions).filter(s=>s.hasPain).length} pain-flagged sessions`,
+      earned: ()=>Object.values(DB.sessions).filter(s=>s.hasPain).length>=5,
+      date: ()=>{
+        const painSessions=Object.values(DB.sessions).filter(s=>s.hasPain).sort((a,b)=>a.date.localeCompare(b.date));
+        return painSessions[4]?.date||null;
+      },
+    },
+    // ── CONSISTENCY ───────────────────────────────────────────────────────────
+    {
+      category:'📅 CONSISTENCY',
+      id:'once_a_week_year',
+      icon:'🗓️',
+      title:'One Year, One Day',
+      desc:`Worked out at least once a week for a full year (52 weeks). Injuries and illness excused — life happens. The habit held.`,
+      stat: ()=>`${totalWorkouts} workouts logged total`,
+      earned: ()=>!!checkConsistencyAchievement(1,52),
+      date: ()=>checkConsistencyAchievement(1,52),
+    },
+    {
+      category:'📅 CONSISTENCY',
+      id:'three_a_week_year',
+      icon:'📆',
+      title:'Three and Counting',
+      desc:`Averaged 3 workouts per week for a full year. Injuries and illness forgiven. You showed up when it counted.`,
+      stat: ()=>`${totalWorkouts} workouts logged total`,
+      earned: ()=>!!checkConsistencyAchievement(3,52),
+      date: ()=>checkConsistencyAchievement(3,52),
+    },
+    {
+      category:'📅 CONSISTENCY',
+      id:'five_a_week_year',
+      icon:'🔥',
+      title:'The Devoted',
+      desc:`Five workouts per week for an entire year, illness and injury excepted. You don't skip. You don't quit. You don't negotiate with excuses.`,
+      stat: ()=>`${totalWorkouts} workouts logged total`,
+      earned: ()=>!!checkConsistencyAchievement(5,52),
+      date: ()=>checkConsistencyAchievement(5,52),
+    },
+    // ── FUN FACTS (always visible, not earned) ────────────────────────────────
+    {
+      category:'💡 FUN FACTS',
+      id:'ff_hp_books',
+      icon:'📚',
+      title:'Harry Potter Library',
+      desc:`Your total volume equals ${Math.max(0,Math.floor(vol/ACH.HP_BOOK_LBS)).toLocaleString()} copies of the entire Harry Potter series stacked up.`,
+      stat: ()=>`${Math.floor(vol/ACH.HP_BOOK_LBS).toLocaleString()} copies`,
+      earned: ()=>vol>0,
+      date: ()=>completed[0]||null,
+      alwaysShow: true,
+    },
+    {
+      category:'💡 FUN FACTS',
+      id:'ff_oscar',
+      icon:'🏆',
+      title:'Oscar Season',
+      desc:`You have lifted the equivalent of ${Math.max(0,Math.floor(vol/ACH.OSCAR_STATUE)).toLocaleString()} Oscar statues. That's ${vol>ACH.OSCAR_STATUE*3000?'more than all Oscars ever awarded — you win.':'still fewer than the total ever awarded, but impressive.'}`,
+      stat: ()=>`${Math.floor(vol/ACH.OSCAR_STATUE).toLocaleString()} Oscars`,
+      earned: ()=>vol>0,
+      date: ()=>completed[0]||null,
+      alwaysShow: true,
+    },
+    {
+      category:'💡 FUN FACTS',
+      id:'ff_swords_count',
+      icon:'⚔️',
+      title:'The Arsenal',
+      desc:`Your total lifting volume is enough iron to forge ${Math.max(0,Math.floor(vol/ACH.LONGSWORD)).toLocaleString()} longswords, ${Math.max(0,Math.floor(vol/ACH.CLAYMORE)).toLocaleString()} claymores, and ${Math.max(0,Math.floor(vol/ACH.WARHAMMER)).toLocaleString()} warhammers.`,
+      stat: ()=>`Forged from ${vol.toLocaleString()}lbs of iron`,
+      earned: ()=>vol>0,
+      date: ()=>completed[0]||null,
+      alwaysShow: true,
+    },
+    {
+      category:'💡 FUN FACTS',
+      id:'ff_gorilla_bench',
+      icon:'🦍',
+      title:'Gorilla Math',
+      desc:`A silverback gorilla (${ACH.GORILLA}lbs) could bench press a rhino (${ACH.RHINO.toLocaleString()}lbs). You have lifted ${vol.toLocaleString()}lbs total. ${vol>=ACH.RHINO?"You out-lifted the gorilla rhino combo. Respect.":"The gorilla is still ahead. Keep going."}`,
+      stat: ()=>`Your vol vs gorilla-bench-rhino: ${vol.toLocaleString()} vs ${ACH.RHINO.toLocaleString()}lbs`,
+      earned: ()=>vol>0,
+      date: ()=>completed[0]||null,
+      alwaysShow: true,
+    },
+  ];
+
+  const earned=ACHIEVEMENTS.filter(a=>a.earned());
+  const locked=ACHIEVEMENTS.filter(a=>!a.earned()&&!a.alwaysShow);
+  const funFacts=ACHIEVEMENTS.filter(a=>a.alwaysShow);
+
+  return {
+    all: ACHIEVEMENTS,
+    earned,
+    locked,
+    funFacts,
+    total: ACHIEVEMENTS.filter(a=>!a.alwaysShow).length,
+  };
+}
+
+function renderAchievementBody(achData){
+  const categories=[...new Set(achData.all.map(a=>a.category))];
+
+  return categories.map(cat=>{
+    const catItems=achData.all.filter(a=>a.category===cat);
+    if(!catItems.length) return '';
+
+    return `<div class="ach-section-label">${cat}</div>
+    <div class="achievement-grid">
+      ${catItems.map(a=>{
+        const isEarned=a.earned();
+        const earnedDate=isEarned?a.date():null;
+        return `<div class="ach-card ${isEarned?'earned':'locked'}">
+          <div class="ach-icon">${a.icon}</div>
+          <div class="ach-title">${a.title}</div>
+          <div class="ach-desc">${a.desc}</div>
+          <div class="ach-stat">${a.stat()}</div>
+          ${earnedDate?`<div class="ach-date">✓ EARNED ${earnedDate}</div>`:''}
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+
+function toggleAchievements(el){
+  const body=document.getElementById('achievementBody');
+  const chev=el.querySelector('.achievement-toggle-chev');
+  if(!body||!chev) return;
+  const open=body.classList.toggle('open');
+  chev.classList.toggle('open',open);
 }
 </script>
 </body>
